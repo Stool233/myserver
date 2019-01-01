@@ -4,14 +4,15 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.stool.myserver.core.Context;
-import org.stool.myserver.core.EntryPointInternal;
+import org.stool.myserver.core.EntryPoint;
+import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpServer;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-public class EntryPointImpl implements EntryPointInternal {
+public class EntryPointImpl implements EntryPoint {
 
     private EventLoopGroup acceptorEventLoopGroup;
     private EventLoopGroup ioworkerEventLoopGroup;
@@ -83,6 +84,11 @@ public class EntryPointImpl implements EntryPointInternal {
         return null;
     }
 
+    @Override
+    public void runOnContext(Handler<Void> action) {
+        Context context = getOrCreateContext();
+        context.runOnContext(action);
+    }
 
     @Override
     public HttpServer createHttpServer() {

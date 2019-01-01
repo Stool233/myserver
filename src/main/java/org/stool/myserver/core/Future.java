@@ -1,8 +1,20 @@
 package org.stool.myserver.core;
 
+import org.stool.myserver.core.impl.FutureImpl;
+
 import java.util.function.Function;
 
 public interface Future<T> extends AsyncResult<T>, Handler<AsyncResult<T>> {
+
+    static <T> Future<T> succeededFuture() {
+        // todo
+        return new FutureImpl<>();
+    }
+
+    static <T> Future<T> failedFuture(Throwable cause) {
+        return new FutureImpl<>();
+    }
+
 
     /**
      * 设置result，并且调用handler

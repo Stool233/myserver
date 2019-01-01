@@ -7,10 +7,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpRequestEncoder;
-import org.stool.myserver.core.AsyncResult;
-import org.stool.myserver.core.EntryPoint;
-import org.stool.myserver.core.EntryPointInternal;
-import org.stool.myserver.core.Handler;
+import org.stool.myserver.core.*;
 import org.stool.myserver.core.http.HttpServer;
 import org.stool.myserver.core.http.HttpServerRequest;
 import org.stool.myserver.core.impl.ContextImpl;
@@ -19,10 +16,10 @@ public class HttpServerImpl implements HttpServer {
 
     private Handler<HttpServerRequest> requestHandler;
 
-    private ContextImpl listenContext;
+    private Context listenContext;
     private volatile boolean listening;
 
-    private EntryPointInternal entryPoint;
+    private EntryPoint entryPoint;
     private ServerBootstrap bootstrap;
 
 
@@ -55,7 +52,7 @@ public class HttpServerImpl implements HttpServer {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-
+                // todo
             }
         });
 
@@ -65,7 +62,7 @@ public class HttpServerImpl implements HttpServer {
     private void configureHttp(ChannelPipeline pipeline) {
         pipeline.addLast("httpDecoder", new HttpRequestDecoder());
         pipeline.addLast("httpEncoder", new HttpRequestEncoder());
-
+        // todo
     }
 
     @Override

@@ -1,5 +1,7 @@
 package org.stool.myserver.core;
 
+import io.netty.channel.EventLoop;
+
 /**
  * 执行上下文
  */
@@ -32,6 +34,9 @@ public interface Context {
      */
     void executeFromIO(ContextTask task);
 
+    void executeFromIO(Handler<Void> task);
+
+    <T> void executeFromIO(T value, Handler<T> task);
 
     <T> T get(String key);
 
@@ -53,6 +58,8 @@ public interface Context {
      * @return
      */
     Handler<Throwable> exceptionHandler();
+
+    EventLoop getEventLoop();
 
     /**
      * 上下文任务

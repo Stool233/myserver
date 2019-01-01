@@ -8,18 +8,18 @@ import java.util.concurrent.ExecutorService;
 
 public abstract class ContextImpl implements Context {
 
-    private EntryPointInternal owner;
+    private EntryPoint owner;
     private EventLoop eventLoop;
     private ExecutorService workerPool;
 
-    private static EventLoop getEventLoop(EntryPointInternal entryPoint) {
+    private static EventLoop getEventLoop(EntryPoint entryPoint) {
         if (entryPoint.getIOWorkerEventLoopGroup() != null) {
             return entryPoint.getIOWorkerEventLoopGroup().next();
         }
         return null;
     }
 
-    public ContextImpl(EntryPointInternal owner) {
+    public ContextImpl(EntryPoint owner) {
         this.owner = owner;
         this.eventLoop = getEventLoop(owner);
         workerPool = owner.getWorkerPool();
@@ -71,6 +71,44 @@ public abstract class ContextImpl implements Context {
     }
 
     @Override
+    public void executeFromIO(Handler<Void> task) {
+        executeFromIO(null, task);
+    }
+
+    @Override
+    public <T> void executeFromIO(T value, Handler<T> task) {
+        checkEventLoopThread();
+        execute(value, task);
+    }
+
+    protected abstract <T> void execute(T value, Handler<T> task);
+
+    public <T> boolean executeTask(T arg, Handler<T> hTask) {
+        Thread th = Thread.currentThread();
+        if (!(th instanceof MyThread)) {
+            throw new IllegalStateException("is not MyThread");
+        }
+        MyThread current = (MyThread) th;
+
+        try {
+            setContext(current, this);
+            hTask.handle(arg);
+            return true;
+        } catch (Throwable t) {
+            return false;
+        } finally {
+
+        }
+    }
+
+    private void checkEventLoopThread() {
+        Thread current = Thread.currentThread();
+        if (!(current instanceof MyThread)) {
+            throw new IllegalStateException("is not MyThread ");
+        }
+    }
+
+    @Override
     public <T> T get(String key) {
         return null;
     }
@@ -100,6 +138,7 @@ public abstract class ContextImpl implements Context {
         return null;
     }
 
+    @Override
     public EventLoop getEventLoop() {
         return eventLoop;
     }

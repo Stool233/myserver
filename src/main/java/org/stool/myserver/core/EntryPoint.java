@@ -1,6 +1,9 @@
 package org.stool.myserver.core;
 
+import io.netty.channel.EventLoopGroup;
 import org.stool.myserver.core.http.HttpServer;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  * 调用核心API的入口点
@@ -18,4 +21,15 @@ public interface EntryPoint {
     static EntryPoint entryPoint() {
         return null;
     }
+
+    EventLoopGroup getIOWorkerEventLoopGroup();
+
+    EventLoopGroup getAcceptorEventLoopGroup();
+
+    ExecutorService getWorkerPool();
+
+
+    Context getContext();
+
+    void runOnContext(Handler<Void> action);
 }
