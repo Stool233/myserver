@@ -12,6 +12,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stool.myserver.core.Context;
 import org.stool.myserver.core.EntryPoint;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpConnection;
@@ -41,7 +42,7 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
 
     public HttpServerConnection(EntryPoint entryPoint,
                                 ChannelHandlerContext channel,
-                                ContextImpl context,
+                                Context context,
                                 HttpHandlers handlers) {
         super(entryPoint, channel, context);
         this.requestHandler = requestHandler(handlers);

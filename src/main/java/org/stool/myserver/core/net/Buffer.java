@@ -1,23 +1,21 @@
 package org.stool.myserver.core.net;
 
 import io.netty.buffer.ByteBuf;
+import org.stool.myserver.core.net.impl.BufferImpl;
 
 public interface Buffer {
 
 
     static Buffer buffer(ByteBuf byteBuf) {
-        return null;
-        // todo
+        return new BufferImpl(byteBuf);
     }
 
     static Buffer buffer() {
-        return null;
-        // todo
+        return new BufferImpl();
     }
 
     static Buffer buffer(String chunk) {
-        return null;
-        // todo
+        return new BufferImpl(chunk);
     }
 
     ByteBuf getByteBuf();

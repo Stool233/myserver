@@ -3,10 +3,7 @@ package org.stool.myserver.core.net.impl;
 import io.netty.channel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.stool.myserver.core.AsyncResult;
-import org.stool.myserver.core.EntryPoint;
-import org.stool.myserver.core.Future;
-import org.stool.myserver.core.Handler;
+import org.stool.myserver.core.*;
 import org.stool.myserver.core.impl.ContextImpl;
 import org.stool.myserver.core.net.SocketAddress;
 
@@ -21,7 +18,7 @@ public abstract class BaseConnection {
 
     protected final EntryPoint entryPoint;
     protected final ChannelHandlerContext chctx;
-    protected final ContextImpl context;
+    protected final Context context;
 
     private final VoidChannelPromise voidPromise;
 
@@ -32,7 +29,7 @@ public abstract class BaseConnection {
     private Handler<Void> closeHandler;
     private Handler<Throwable> exceptionHandler;
 
-    public BaseConnection(EntryPoint entryPoint, ChannelHandlerContext chctx, ContextImpl context) {
+    public BaseConnection(EntryPoint entryPoint, ChannelHandlerContext chctx, Context context) {
         this.entryPoint = entryPoint;
         this.chctx = chctx;
         this.context = context;
@@ -116,7 +113,7 @@ public abstract class BaseConnection {
         return chctx.channel();
     }
 
-    public ContextImpl getContext() {
+    public Context getContext() {
         return context;
     }
 

@@ -2,6 +2,7 @@ package org.stool.myserver.core;
 
 import io.netty.channel.EventLoopGroup;
 import org.stool.myserver.core.http.HttpServer;
+import org.stool.myserver.core.impl.EntryPointImpl;
 
 import java.util.concurrent.ExecutorService;
 
@@ -19,7 +20,7 @@ public interface EntryPoint {
     HttpServer createHttpServer();
 
     static EntryPoint entryPoint() {
-        return null;
+        return new EntryPointImpl();
     }
 
     EventLoopGroup getIOWorkerEventLoopGroup();

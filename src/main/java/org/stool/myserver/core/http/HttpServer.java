@@ -20,6 +20,8 @@ public interface HttpServer extends Server{
 
     Handler<HttpServerRequest> requestHandler();
 
+    HttpServer connectionHandler(Handler<HttpConnection> handler);
+
     HttpServer exceptionHandler(Handler<Throwable> handler);
 
     /**

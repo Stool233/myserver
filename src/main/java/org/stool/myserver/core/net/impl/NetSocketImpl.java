@@ -9,10 +9,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.stool.myserver.core.AsyncResult;
-import org.stool.myserver.core.EntryPoint;
-import org.stool.myserver.core.Future;
-import org.stool.myserver.core.Handler;
+import org.stool.myserver.core.*;
 import org.stool.myserver.core.impl.ContextImpl;
 import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
@@ -41,7 +38,7 @@ public class NetSocketImpl extends BaseConnection implements NetSocket {
 
 
 
-    public NetSocketImpl(EntryPoint entryPoint, ChannelHandlerContext chctx, ContextImpl context, SocketAddress remoteAddress) {
+    public NetSocketImpl(EntryPoint entryPoint, ChannelHandlerContext chctx, Context context, SocketAddress remoteAddress) {
         super(entryPoint, chctx, context);
         this.remoteAddress = remoteAddress;
         pending = new InboundBuffer<>(context);
@@ -50,7 +47,7 @@ public class NetSocketImpl extends BaseConnection implements NetSocket {
         pending.emptyHandler(v -> checkEnd());
     }
 
-    public NetSocketImpl(EntryPoint entryPoint, ChannelHandlerContext chctx, ContextImpl context) {
+    public NetSocketImpl(EntryPoint entryPoint, ChannelHandlerContext chctx, Context context) {
         this(entryPoint, chctx, context, null);
     }
 

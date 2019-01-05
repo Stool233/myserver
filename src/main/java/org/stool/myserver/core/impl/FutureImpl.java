@@ -8,93 +8,149 @@ import java.util.function.Function;
 
 public class FutureImpl<T> implements Future<T> {
 
+    private boolean failed;
+    private boolean succeeded;
+    private Handler<AsyncResult<T>> handler;
+    private T result;
+    private Throwable throwable;
+
+    public FutureImpl() {
+
+    }
+
     @Override
     public void complete() {
-
+        if (!tryComplete()) {
+            throw new IllegalStateException("Result is already complete: " + (succeeded ? "succeeded" : "failed"));
+        }
     }
 
     @Override
     public void complete(T result) {
-
+        if (!tryComplete(result)) {
+            throw new IllegalStateException("Result is already complete: " + (succeeded ? "succeeded" : "failed"));
+        }
     }
 
     @Override
     public boolean isComplete() {
-        return false;
+        return failed || succeeded;
     }
 
     @Override
     public void fail(Throwable cause) {
-
+        if (!tryFail(cause)) {
+            throw new IllegalStateException("Result is already complete: " + (succeeded ? "succeeded" : "failed"));
+        }
     }
 
     @Override
     public void fail(String failureMessage) {
-
+        if (!tryFail(failureMessage)) {
+            throw new IllegalStateException("Result is already complete: " + (succeeded ? "succeeded" : "failed"));
+        }
     }
 
     @Override
     public boolean tryComplete() {
-        return false;
+        return tryComplete(null);
     }
 
     @Override
     public boolean tryComplete(T result) {
-        return false;
+        Handler<AsyncResult<T>> h;
+        synchronized (this) {
+            if (succeeded || failed) {
+                return false;
+            }
+            this.result = result;
+            succeeded = true;
+            h = handler;
+            handler = null;
+        }
+        if (h != null) {
+            h.handle(this);
+        }
+        return true;
     }
 
     @Override
     public boolean tryFail(Throwable cause) {
-        return false;
+        Handler<AsyncResult<T>> h;
+        synchronized (this) {
+            if (succeeded || failed) {
+                return false;
+            }
+            this.throwable = cause != null ? cause : new Exception();
+            failed = true;
+            h = handler;
+            handler = null;
+        }
+        if (h != null) {
+            h.handle(this);
+        }
+        return true;
     }
 
     @Override
     public boolean tryFail(String failureMessage) {
-        return false;
+        return tryFail(new Exception(failureMessage));
     }
 
     @Override
     public Future<T> setHandler(Handler<AsyncResult<T>> handler) {
-        return null;
-    }
-
-    @Override
-    public <U> Future<U> map(Function<T, U> mapper) {
-        return null;
-    }
-
-    @Override
-    public Future<T> otherwise(Function<Throwable, T> mapper) {
-        return null;
-    }
-
-    @Override
-    public <U> Future<U> compose(Function<T, Future<U>> mapper) {
-        return null;
+        boolean callHandler;
+        synchronized (this) {
+            callHandler = isComplete();
+            if (!callHandler) {
+                this.handler = handler;
+            }
+        }
+        if (callHandler) {
+            handler.handle(this);
+        }
+        return this;
     }
 
     @Override
     public T result() {
-        return null;
+        return result;
     }
 
     @Override
     public boolean succeeded() {
-        return false;
+        return succeeded;
     }
 
     @Override
     public boolean failed() {
-        return false;
+        return failed;
     }
 
     @Override
     public Throwable cause() {
-        return null;
+        return throwable;
     }
 
     @Override
-    public void handle(AsyncResult<T> event) {
+    public void handle(AsyncResult<T> asyncResult) {
+        if (asyncResult.succeeded()) {
+            complete(asyncResult.result());
+        } else {
+            fail(asyncResult.cause());
+        }
+    }
 
+    @Override
+    public String toString() {
+        synchronized (this) {
+            if (succeeded) {
+                return "Future{result=" + result + "}";
+            }
+            if (failed) {
+                return "Future{cause=" + throwable.getMessage() + "}";
+            }
+            return "Future{unresolved}";
+        }
     }
 }

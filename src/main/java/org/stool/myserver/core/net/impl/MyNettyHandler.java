@@ -49,7 +49,7 @@ public class MyNettyHandler<C extends BaseConnection> extends ChannelDuplexHandl
         return create(connection.context, ctx -> connection);
     }
 
-    private static <C extends BaseConnection> MyNettyHandler<C> create(ContextImpl context, Function<ChannelHandlerContext, C> connectionFactory) {
+    public static <C extends BaseConnection> MyNettyHandler<C> create(Context context, Function<ChannelHandlerContext, C> connectionFactory) {
         return new MyNettyHandler<>(context, connectionFactory);
     }
 

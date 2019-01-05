@@ -7,6 +7,7 @@ import org.stool.myserver.core.Context;
 import org.stool.myserver.core.EntryPoint;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpServer;
+import org.stool.myserver.core.http.impl.HttpServerImpl;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -92,6 +93,6 @@ public class EntryPointImpl implements EntryPoint {
 
     @Override
     public HttpServer createHttpServer() {
-        return null;
+        return new HttpServerImpl(this);
     }
 }
