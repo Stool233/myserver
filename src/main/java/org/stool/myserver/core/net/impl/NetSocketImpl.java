@@ -39,6 +39,8 @@ public class NetSocketImpl extends BaseConnection implements NetSocket {
     private InboundBuffer<Object> pending;
     private boolean closed;
 
+
+
     public NetSocketImpl(EntryPoint entryPoint, ChannelHandlerContext chctx, ContextImpl context, SocketAddress remoteAddress) {
         super(entryPoint, chctx, context);
         this.remoteAddress = remoteAddress;
@@ -46,6 +48,10 @@ public class NetSocketImpl extends BaseConnection implements NetSocket {
         pending.drainHandler(v -> doResume());
         pending.handler(NULL_MSG_HANDLER);
         pending.emptyHandler(v -> checkEnd());
+    }
+
+    public NetSocketImpl(EntryPoint entryPoint, ChannelHandlerContext chctx, ContextImpl context) {
+        this(entryPoint, chctx, context, null);
     }
 
     @Override

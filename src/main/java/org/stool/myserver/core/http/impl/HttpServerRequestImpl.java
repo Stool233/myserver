@@ -17,7 +17,6 @@ import org.stool.myserver.core.http.HttpServerResponse;
 import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
 import org.stool.myserver.core.net.SocketAddress;
-import org.stool.myserver.core.net.impl.HttpServerConnection;
 import org.stool.myserver.core.streams.InboundBuffer;
 
 import java.net.URISyntaxException;
@@ -81,12 +80,20 @@ public class HttpServerRequestImpl implements HttpServerRequest{
         }
     }
 
-    void handlerContext(Buffer buffer) {
+    void handlerContent(Buffer buffer) {
         if (paused || pending != null) {
             enqueueData(buffer);
         } else {
             handleData(buffer);
         }
+    }
+
+    void appendRequest(HttpServerRequestImpl next) {
+        HttpServerRequestImpl current = this;
+        while(current.next != null) {
+            current = current.next;
+        }
+        current.next = next;
     }
 
     private void enqueueData(Buffer chunk) {
@@ -360,5 +367,25 @@ public class HttpServerRequestImpl implements HttpServerRequest{
     @Override
     public HttpConnection connection() {
         return conn;
+    }
+
+    void handleEnd() {
+    }
+
+    HttpServerRequestImpl nextRequest() {
+        return next;
+    }
+
+    void handlePipelined() {
+        paused = false;
+        boolean end = ended;
+        ended = false;
+        handleBegin();
+        if (!paused && pending != null && pending.size() > 0) {
+            pending.resume();
+        }
+        if (end) {
+            handleEnd();
+        }
     }
 }

@@ -11,8 +11,6 @@ import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpServerResponse;
 import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
-import org.stool.myserver.core.net.impl.BaseConnection;
-import org.stool.myserver.core.net.impl.HttpServerConnection;
 
 import java.util.Map;
 
@@ -320,6 +318,7 @@ public class HttpServerResponseImpl implements HttpServerResponse {
         }
     }
 
+    @Override
     public void handleDrained() {
         synchronized (conn) {
             if (drainHandler != null) {

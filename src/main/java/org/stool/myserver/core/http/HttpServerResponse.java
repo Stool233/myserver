@@ -58,4 +58,6 @@ public interface HttpServerResponse {
     HttpServerResponse headersEndHandler(Handler<Void> handler);
 
     HttpServerResponse bodyEndHandler(Handler<Void> handler);
+
+    void handleDrained();
 }
