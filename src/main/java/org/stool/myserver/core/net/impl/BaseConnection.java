@@ -38,11 +38,6 @@ public abstract class BaseConnection {
     }
 
 
-
-    protected Object encode(Object obj) {
-        return obj;
-    }
-
     public ChannelHandler handler() {
         return chctx.handler();
     }
@@ -53,7 +48,7 @@ public abstract class BaseConnection {
     }
 
     private void write(Object msg, ChannelPromise promise) {
-        msg = encode(msg);
+        // 如果还在读请求，或者还有没有写的content，则不需要flush
         if (read || writeInProgress > 0) {
             needsFlush = true;
             chctx.write(msg, promise);

@@ -46,7 +46,8 @@ public class HttpServerResponseImpl implements HttpServerResponse {
         this.conn = conn;
         this.headers = new DefaultHttpHeaders();
         this.status = HttpResponseStatus.OK;
-        this.keepAlive = request.headers().contains(org.stool.myserver.core.http.HttpHeaders.CONNECTION);
+//        this.keepAlive = request.headers().contains(org.stool.myserver.core.http.HttpHeaders.CONNECTION);
+        this.keepAlive = false;
         this.head = request.method() == HttpMethod.HEAD;
     }
 
@@ -160,6 +161,11 @@ public class HttpServerResponseImpl implements HttpServerResponse {
     }
 
     @Override
+    public HttpServerResponse write(String data) {
+        return write(Buffer.buffer(data));
+    }
+
+    @Override
     public HttpServerResponse write(Buffer data) {
         ByteBuf buf = data.getByteBuf();
         return write(buf);
@@ -172,7 +178,9 @@ public class HttpServerResponseImpl implements HttpServerResponse {
             bytesWritten += chunk.readableBytes();
             if (!headWritten) {
                 prepareHeaders(-1);
-                conn.writeToChannel(new AssembledHttpResponse(head, HttpVersion.HTTP_1_1, status, headers, chunk));
+//                conn.writeToChannel(new AssembledHttpResponse(head, HttpVersion.HTTP_1_1, status, headers, chunk));
+                conn.writeToChannel(new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, headers));
+                conn.writeToChannel(new DefaultHttpContent(chunk));
             } else {
                 conn.writeToChannel(new DefaultHttpContent(chunk));
             }
@@ -182,6 +190,7 @@ public class HttpServerResponseImpl implements HttpServerResponse {
 
     private void prepareHeaders(long contentLength) {
         // todo
+        headWritten = true;
     }
 
     public NetSocket netSocket(boolean isConnect) {
@@ -193,7 +202,7 @@ public class HttpServerResponseImpl implements HttpServerResponse {
                 }
                 status = HttpResponseStatus.OK;
                 prepareHeaders(-1);
-                conn.writeToChannel(new AssembledHttpResponse(head, HttpVersion.HTTP_1_1, status, headers));
+                conn.writeToChannel(new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, headers));
             }
             written = true;
             netSocket = conn.createNetSocket();
@@ -226,9 +235,10 @@ public class HttpServerResponseImpl implements HttpServerResponse {
             bytesWritten += data.readableBytes();
             if (!headWritten) {
                 prepareHeaders(bytesWritten);
-                conn.writeToChannel(new AssembledFullHttpResponse(head, HttpVersion.HTTP_1_1, status, headers, data, trailingHeaders));
+//                conn.writeToChannel(new AssembledFullHttpResponse(head, HttpVersion.HTTP_1_1, status, headers, data, trailingHeaders));
+                conn.writeToChannel(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, data, headers, trailingHeaders));
             } else {
-                conn.writeToChannel(new AssembledLastHttpContent(data, trailingHeaders));
+                conn.writeToChannel(new DefaultLastHttpContent(data));
             }
 
             if (!keepAlive) {

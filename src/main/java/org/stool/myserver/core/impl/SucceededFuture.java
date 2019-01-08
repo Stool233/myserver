@@ -70,7 +70,7 @@ public class SucceededFuture<T> implements Future<T> {
 
     @Override
     public boolean succeeded() {
-        return false;
+        return true;
     }
 
     @Override

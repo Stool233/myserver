@@ -33,6 +33,8 @@ public interface HttpServerResponse {
 
     HttpServerResponse write(Buffer data);
 
+    HttpServerResponse write(String data);
+
     HttpServerResponse setWriteQueueMaxSize(int maxSize);
 
     HttpServerResponse drainHandler(Handler<Void> handler);

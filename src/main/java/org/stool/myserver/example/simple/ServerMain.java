@@ -15,6 +15,18 @@ public class ServerMain {
         HttpServer server = HttpServer.server();
 
         server.requestHandler(request -> {
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
+            request.response().write("Hello World!");
             request.response().end("Hello World!");
         }).listen(8080);
 

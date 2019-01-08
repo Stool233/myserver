@@ -12,6 +12,12 @@ public abstract class ContextImpl implements Context {
     private EventLoop eventLoop;
     private ExecutorService workerPool;
 
+    public ContextImpl(EntryPoint owner) {
+        this.owner = owner;
+        this.eventLoop = getEventLoop(owner);
+        workerPool = owner.getWorkerPool();
+    }
+
     private static EventLoop getEventLoop(EntryPoint entryPoint) {
         if (entryPoint.getIOWorkerEventLoopGroup() != null) {
             return entryPoint.getIOWorkerEventLoopGroup().next();
@@ -19,19 +25,12 @@ public abstract class ContextImpl implements Context {
         return null;
     }
 
-    public ContextImpl(EntryPoint owner) {
-        this.owner = owner;
-        this.eventLoop = getEventLoop(owner);
-        workerPool = owner.getWorkerPool();
-    }
-
-
     public static void setContext(ContextImpl context) {
         Thread current = Thread.currentThread();
         if (current instanceof MyThread) {
             setContext((MyThread) current, context);
         } else {
-            throw new IllegalStateException("Attempt to setContext on non Vert.x thread " + Thread.currentThread());
+            throw new IllegalStateException("Attempt to setContext on non MyThread " + Thread.currentThread());
         }
     }
 

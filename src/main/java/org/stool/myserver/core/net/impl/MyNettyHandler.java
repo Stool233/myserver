@@ -104,7 +104,7 @@ public class MyNettyHandler<C extends BaseConnection> extends ChannelDuplexHandl
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         C conn = getConnection();
-        context.executeFromIO(() -> conn.handleInterestedOpsChanged());
+        context.executeFromIO(v -> conn.handleInterestedOpsChanged());
     }
 
     @Override

@@ -57,7 +57,7 @@ public class EntryPointImpl implements EntryPoint {
     @Override
     public Context getContext(){
         Context context = context();
-        if (context != null || context.owner() == this) {
+        if (context != null && context.owner() == this) {
             return context;
         }
         return null;

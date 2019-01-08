@@ -1,7 +1,6 @@
 package org.stool.myserver.core.http.impl;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
@@ -17,7 +16,6 @@ import org.stool.myserver.core.EntryPoint;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpConnection;
 import org.stool.myserver.core.http.HttpServerRequest;
-import org.stool.myserver.core.impl.ContextImpl;
 import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
 import org.stool.myserver.core.net.SocketAddress;
@@ -31,10 +29,6 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
 
     private static final Logger log = LoggerFactory.getLogger(HttpServerConnection.class);
     public Handler<HttpServerRequest> requestHandler;
-
-    private boolean requestFailed;
-    private long bytesRead;
-    private long bytesWritten;
 
     private HttpServerRequestImpl requestInProgress;
     private HttpServerRequestImpl responseInProgress;
@@ -117,7 +111,7 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
             return ;
         }
         Buffer buffer = Buffer.buffer(MyNettyHandler.safeBuffer(content.content(), chctx.alloc()));
-        requestInProgress.handlerContent(buffer);
+        requestInProgress.handleContent(buffer);
         if (content instanceof LastHttpContent) {
             handleEnd();
         }
@@ -130,8 +124,10 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
     }
 
     public synchronized void responseComplete() {
+        // 使用局部变量保存当前响应，并将当前响应清空，使当前线程能处理其他请求
         HttpServerRequestImpl request = responseInProgress;
         responseInProgress = null;
+        // 若响应链表还有下一个请求节点，则继续处理
         HttpServerRequestImpl next = request.nextRequest();
         if (next != null) {
             handleNext(next);
@@ -139,6 +135,7 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
     }
 
     private void handleNext(HttpServerRequestImpl next) {
+        // 开启异步任务继续处理响应链表接下来的请求节点
         responseInProgress = next;
         getContext().runOnContext(v -> responseInProgress.handlePipelined());
     }
@@ -197,15 +194,8 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
         endReadAndFlush();
 
         ChannelPipeline pipeline = chctx.pipeline();
-        ChannelHandler compressor = pipeline.get(HttpChunkContentCompressor.class);
-        if (compressor != null) {
-            pipeline.remove(compressor);
-        }
 
         pipeline.remove("httpDecoder");
-        if (pipeline.get("chunkedWriter") != null) {
-            pipeline.remove("chunkedWriter");
-        }
 
         chctx.pipeline().replace("handler", "handler", MyNettyHandler.create(socket));
 

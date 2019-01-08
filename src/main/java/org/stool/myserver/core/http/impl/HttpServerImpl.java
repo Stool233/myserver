@@ -7,6 +7,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,8 @@ public class HttpServerImpl implements HttpServer {
 
     @Override
     public HttpServer requestHandler(Handler<HttpServerRequest> handler) {
-        return null;
+        requestStream.handler(handler);
+        return this;
     }
 
     @Override
@@ -83,7 +85,7 @@ public class HttpServerImpl implements HttpServer {
         listenContext = entryPoint.getOrCreateContext();
 
         bootstrap = new ServerBootstrap();
-        bootstrap.group(entryPoint.getAcceptorEventLoopGroup(), entryPoint.getIOWorkerEventLoopGroup());
+        bootstrap.group(entryPoint.getAcceptorEventLoopGroup(), availableWorkers);
 
         bootstrap.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -147,7 +149,7 @@ public class HttpServerImpl implements HttpServer {
 
     private void configureHttp(ChannelPipeline pipeline, HandlerHolder<HttpHandlers> holder) {
         pipeline.addLast("httpDecoder", new HttpRequestDecoder());
-        pipeline.addLast("httpEncoder", new HttpRequestEncoder());
+        pipeline.addLast("httpEncoder", new HttpResponseEncoder());
 
         MyNettyHandler<HttpServerConnection> handler = MyNettyHandler.create(holder.context, chctx -> {
             HttpServerConnection conn = new HttpServerConnection(entryPoint, chctx, holder.context, holder.handler);

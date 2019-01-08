@@ -49,7 +49,6 @@ public class HttpServerRequestImpl implements HttpServerRequest{
     private Map<String, String> attributes;
     private HttpPostRequestDecoder decoder;
     private boolean ended;
-    private long bytesRead;
 
     private boolean paused;
     private InboundBuffer<Buffer> pending;
@@ -80,7 +79,7 @@ public class HttpServerRequestImpl implements HttpServerRequest{
         }
     }
 
-    void handlerContent(Buffer buffer) {
+    void handleContent(Buffer buffer) {
         if (paused || pending != null) {
             enqueueData(buffer);
         } else {
@@ -121,7 +120,6 @@ public class HttpServerRequestImpl implements HttpServerRequest{
 
     private void handleData(Buffer data) {
         synchronized (conn) {
-            bytesRead += data.length();
             if (decoder != null) {
                 decoder.offer(new DefaultHttpContent(data.getByteBuf()));
             }
@@ -361,7 +359,7 @@ public class HttpServerRequestImpl implements HttpServerRequest{
 
     @Override
     public HttpServerResponse response() {
-        return null;
+        return response;
     }
 
     @Override
@@ -377,10 +375,13 @@ public class HttpServerRequestImpl implements HttpServerRequest{
     }
 
     void handlePipelined() {
+        // 取消暂停状态
         paused = false;
+        // 使用局部变量保存ended状态，取消ended状态
         boolean end = ended;
         ended = false;
         handleBegin();
+        // 若不为暂停状态，且pending不为空，恢复pending的流动状态
         if (!paused && pending != null && pending.size() > 0) {
             pending.resume();
         }
