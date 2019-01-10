@@ -1,5 +1,7 @@
 package org.stool.myserver.core.http;
 
+import io.netty.handler.codec.http.HttpHeaders;
+import org.stool.myserver.core.Context;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
@@ -38,7 +40,7 @@ public interface HttpServerRequest {
      */
     long bytesRead();
 
-    Map<String, String> headers();
+    HttpHeaders headers();
 
     String getHeader(String headerName);
 
@@ -78,4 +80,5 @@ public interface HttpServerRequest {
 
     HttpConnection connection();
 
+    Context context();
 }

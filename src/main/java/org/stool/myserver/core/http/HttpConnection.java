@@ -1,5 +1,6 @@
 package org.stool.myserver.core.http;
 
+import org.stool.myserver.core.Context;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.net.SocketAddress;
 
@@ -18,5 +19,7 @@ public interface HttpConnection {
     SocketAddress remoteAddress();
 
     SocketAddress localAddress();
+
+    Context getContext();
 
 }

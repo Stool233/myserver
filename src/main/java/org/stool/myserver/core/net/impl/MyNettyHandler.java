@@ -4,6 +4,8 @@ import io.netty.buffer.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stool.myserver.core.Context;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.impl.ContextImpl;
@@ -11,6 +13,8 @@ import org.stool.myserver.core.impl.ContextImpl;
 import java.util.function.Function;
 
 public class MyNettyHandler<C extends BaseConnection> extends ChannelDuplexHandler {
+
+    private static Logger log = LoggerFactory.getLogger(MyNettyHandler.class);
 
     public static ByteBuf safeBuffer(ByteBufHolder holder, ByteBufAllocator allocator) {
         return safeBuffer(holder.content(), allocator);
@@ -109,6 +113,7 @@ public class MyNettyHandler<C extends BaseConnection> extends ChannelDuplexHandl
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.error("error", cause);
         Channel ch = ctx.channel();
         C connection = getConnection();
         if (connection != null) {

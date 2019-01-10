@@ -46,8 +46,7 @@ public class HttpServerResponseImpl implements HttpServerResponse {
         this.conn = conn;
         this.headers = new DefaultHttpHeaders();
         this.status = HttpResponseStatus.OK;
-//        this.keepAlive = request.headers().contains(org.stool.myserver.core.http.HttpHeaders.CONNECTION);
-        this.keepAlive = false;
+        this.keepAlive = !request.headers().contains(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE, true);
         this.head = request.method() == HttpMethod.HEAD;
     }
 
@@ -178,7 +177,6 @@ public class HttpServerResponseImpl implements HttpServerResponse {
             bytesWritten += chunk.readableBytes();
             if (!headWritten) {
                 prepareHeaders(-1);
-//                conn.writeToChannel(new AssembledHttpResponse(head, HttpVersion.HTTP_1_1, status, headers, chunk));
                 conn.writeToChannel(new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, headers));
                 conn.writeToChannel(new DefaultHttpContent(chunk));
             } else {
@@ -190,6 +188,13 @@ public class HttpServerResponseImpl implements HttpServerResponse {
 
     private void prepareHeaders(long contentLength) {
         // todo
+        if (!keepAlive) {
+            headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+        }
+        if (!headers.contains(HttpHeaders.Names.TRANSFER_ENCODING) && !headers.contains(HttpHeaders.Names.CONTENT_LENGTH) && contentLength >= 0) {
+            String value = contentLength == 0 ? "0" : String.valueOf(contentLength);
+            headers.set(HttpHeaders.Names.CONTENT_LENGTH, value);
+        }
         headWritten = true;
     }
 
@@ -235,7 +240,6 @@ public class HttpServerResponseImpl implements HttpServerResponse {
             bytesWritten += data.readableBytes();
             if (!headWritten) {
                 prepareHeaders(bytesWritten);
-//                conn.writeToChannel(new AssembledFullHttpResponse(head, HttpVersion.HTTP_1_1, status, headers, data, trailingHeaders));
                 conn.writeToChannel(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, data, headers, trailingHeaders));
             } else {
                 conn.writeToChannel(new DefaultLastHttpContent(data));

@@ -1,14 +1,13 @@
 package org.stool.myserver.core.http.impl;
 
-import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.Headers;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stool.myserver.core.Context;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpConnection;
 import org.stool.myserver.core.http.HttpMethod;
@@ -42,7 +41,7 @@ public class HttpServerRequestImpl implements HttpServerRequest{
     private Handler<Throwable> exceptionHandler;
 
     private Map<String, String> params;
-    private Map<String, String> headers;
+    private HttpHeaders headers;
     private String absoluteURI;
 
     private Handler<Void> endHandler;
@@ -59,9 +58,7 @@ public class HttpServerRequestImpl implements HttpServerRequest{
     }
 
     void handleBegin() {
-
         response = new HttpServerResponseImpl(conn.entryPoint(), conn, request);
-
         conn.requestHandler.handle(this);
     }
 
@@ -291,8 +288,9 @@ public class HttpServerRequestImpl implements HttpServerRequest{
     }
 
     @Override
-    public Map<String, String> headers() {
-        return null;
+    public HttpHeaders headers() {
+        return request.headers();
+
     }
 
     @Override
@@ -367,7 +365,18 @@ public class HttpServerRequestImpl implements HttpServerRequest{
         return conn;
     }
 
+    @Override
+    public Context context() {
+        return connection().getContext();
+    }
+
     void handleEnd() {
+        synchronized (conn) {
+            ended = true;
+            if (isEnded()) {
+                doEnd();
+            }
+        }
     }
 
     HttpServerRequestImpl nextRequest() {
