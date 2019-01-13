@@ -30,8 +30,8 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
     private static final Logger log = LoggerFactory.getLogger(HttpServerConnection.class);
     public Handler<HttpServerRequest> requestHandler;
 
-    private HttpServerRequestImpl requestInProgress;
-    private HttpServerRequestImpl responseInProgress;
+    private HttpServerRequestImpl requestInProgress;    // 准备接收的请求
+    private HttpServerRequestImpl responseInProgress;   // 准备回复的请求
     private boolean channelPaused;
 
     public HttpServerConnection(EntryPoint entryPoint,
@@ -76,7 +76,7 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
 
     @Override
     public synchronized void handleMessage(Object msg) {
-        if (msg instanceof HttpRequest) {
+        if (msg instanceof HttpRequest) {                           // 读取到请求头
             DefaultHttpRequest request = (DefaultHttpRequest) msg;
             if (request.decoderResult() != DecoderResult.SUCCESS) {
                 // todo
@@ -92,9 +92,9 @@ public class HttpServerConnection extends HttpBaseConnection  implements HttpCon
                 req.pause();
                 responseInProgress.appendRequest(req);
             }
-        } else if (msg == LastHttpContent.EMPTY_LAST_CONTENT) {
+        } else if (msg == LastHttpContent.EMPTY_LAST_CONTENT) {     // 读取到请求终止行
             handleEnd();
-        } else if (msg instanceof HttpContent) {
+        } else if (msg instanceof HttpContent) {                    // 读取到请求体
             handleContent(msg);
         } else {
             handleOther(msg);

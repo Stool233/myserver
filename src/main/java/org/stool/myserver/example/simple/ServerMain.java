@@ -1,5 +1,7 @@
 package org.stool.myserver.example.simple;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +29,7 @@ public class ServerMain {
 
             String param = request.getParam("key");
             log.info("请求参数：" + param);
-            String contentType = request.getHeader(HttpHeaders.Names.CONTENT_TYPE);
+            String contentType = request.getHeader(HttpHeaderNames.CONTENT_TYPE);
             log.info("请求头contentType：" + contentType);
 
             Buffer totalBuffer = Buffer.buffer();
@@ -37,7 +39,7 @@ public class ServerMain {
             request.endHandler(v -> {
                 String requestContent = totalBuffer.getByteBuf().toString(Charset.forName("utf-8"));
                 log.info("客户端说：" + requestContent);
-                request.response().headers().set(HttpHeaders.Names.CONTENT_TYPE, HttpHeaders.Values.APPLICATION_JSON);
+                request.response().headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                 request.response().end("{\"response\": \"Hello World!\"}");
             });
 

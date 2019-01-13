@@ -4,6 +4,10 @@ import org.stool.myserver.core.Context;
 
 import java.util.Objects;
 
+/**
+ * Context与对应handler的包装
+ * @param <T>
+ */
 public class HandlerHolder<T> {
 
     public final Context context;

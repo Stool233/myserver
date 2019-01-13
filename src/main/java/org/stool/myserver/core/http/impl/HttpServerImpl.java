@@ -90,9 +90,7 @@ public class HttpServerImpl implements HttpServer {
         bootstrap.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ChannelPipeline pipeline = ch.pipeline();
                 handleHttp(ch);
-
             }
         });
 
