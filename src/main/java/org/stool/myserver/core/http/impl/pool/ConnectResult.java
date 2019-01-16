@@ -11,15 +11,15 @@ public class ConnectResult<C> {
         this.weight = weight;
     }
 
-    public C getConn() {
+    public C connection() {
         return conn;
     }
 
-    public long getConcurrency() {
+    public long concurrency() {
         return concurrency;
     }
 
-    public long getWeight() {
+    public long weight() {
         return weight;
     }
 }

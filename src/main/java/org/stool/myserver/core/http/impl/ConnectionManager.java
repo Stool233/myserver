@@ -1,5 +1,8 @@
 package org.stool.myserver.core.http.impl;
 
+import org.stool.myserver.core.AsyncResult;
+import org.stool.myserver.core.Context;
+import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpClient;
 import org.stool.myserver.core.http.impl.pool.Pool;
 
@@ -20,6 +23,20 @@ public class ConnectionManager {
         this.maxWaitQueueSize = maxWaitQueueSize;
         this.client = client;
         this.maxSize = maxSize;
+    }
+
+    synchronized void start() {
+
+    }
+
+    void getConnection(Context ctx, String peerHost, int port, String host, Handler<AsyncResult<HttpClientConnection>>) {
+        EndpointKey key = new EndpointKey(port, peerHost, host);
+        while(true) {
+            Endpoint endpoint = endpointMap.computeIfAbsent(key, targetAddress -> {
+                int maxPoolSize = 8;
+                HttpChannelConnector
+            })
+        }
     }
 
     private static final class EndpointKey {
