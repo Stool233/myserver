@@ -9,7 +9,7 @@ public class HttpClientImpl implements HttpClient{
 
     private final EntryPoint entryPoint;
     private final Context creatingContext;
-    private final ConnectionManager httpCM;
+//    private final ConnectionManager httpCM;
 
     private final boolean keepAlive;
 

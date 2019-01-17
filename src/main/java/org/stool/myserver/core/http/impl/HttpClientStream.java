@@ -2,6 +2,7 @@ package org.stool.myserver.core.http.impl;
 
 import io.netty.buffer.ByteBuf;
 import org.stool.myserver.core.Context;
+import org.stool.myserver.core.http.HttpClientRequest;
 import org.stool.myserver.core.http.HttpConnection;
 import org.stool.myserver.core.net.NetSocket;
 
@@ -19,6 +20,10 @@ public interface HttpClientStream {
     void doPause();
     void doResume();
     void doFetch(long amount);
+
+    void reset(long code);
+    void beginRequest(HttpClientRequest req);
+    void endRequest();
 
     NetSocket createNetSocket();
 }

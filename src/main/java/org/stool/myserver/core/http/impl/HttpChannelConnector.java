@@ -7,11 +7,12 @@ import org.stool.myserver.core.Context;
 import org.stool.myserver.core.Future;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpClient;
+import org.stool.myserver.core.http.HttpClientConnection;
 import org.stool.myserver.core.http.impl.pool.ConnectResult;
 import org.stool.myserver.core.http.impl.pool.ConnectionListener;
 import org.stool.myserver.core.http.impl.pool.ConnectionProvider;
 
-public class HttpChannelConnector implements ConnectionProvider<HttpClientConnection{
+public class HttpChannelConnector implements ConnectionProvider<HttpClientConnection> {
 
     private final HttpClient client;
     private final long weight;

@@ -39,8 +39,11 @@ public class ServerMain {
             request.endHandler(v -> {
                 String requestContent = totalBuffer.getByteBuf().toString(Charset.forName("utf-8"));
                 log.info("客户端说：" + requestContent);
-                request.response().headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-                request.response().end("{\"response\": \"Hello World!\"}");
+//                request.response().headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+                request.response().headers().set(HttpHeaderNames.CONTENT_LENGTH, 8);
+//                request.response().end("{\"response\": \"Hello World!\"}");
+                request.response().write("test");
+                request.response().end("test");
             });
 
         }).listen(8081);

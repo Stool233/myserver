@@ -1,11 +1,21 @@
 package org.stool.myserver.core;
 
 import io.netty.channel.EventLoop;
+import org.stool.myserver.core.impl.ContextImpl;
 
 /**
  * 执行上下文
  */
 public interface Context {
+
+
+    static boolean isOnWorkerThread() {
+        return ContextImpl.isOnMyThread(true);
+    }
+
+    static boolean isOnEventLoopThread() {
+        return ContextImpl.isOnMyThread(false);
+    }
 
     /**
      * 在当前的Context执行一个action，异步执行

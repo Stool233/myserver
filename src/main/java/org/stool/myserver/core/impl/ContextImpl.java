@@ -18,6 +18,15 @@ public abstract class ContextImpl implements Context {
         workerPool = owner.getWorkerPool();
     }
 
+    public static boolean isOnMyThread(boolean worker) {
+        Thread t = Thread.currentThread();
+        if (t instanceof MyThread) {
+            MyThread mt = (MyThread) t;
+            return mt.isWorker() == worker;
+        }
+        return false;
+    }
+
     private static EventLoop getEventLoop(EntryPoint entryPoint) {
         if (entryPoint.getIOWorkerEventLoopGroup() != null) {
             return entryPoint.getIOWorkerEventLoopGroup().next();

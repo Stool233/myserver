@@ -1,5 +1,6 @@
 package org.stool.myserver.core.http.impl;
 
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.net.URI;
@@ -67,5 +68,40 @@ public class HttpUtils {
             // todo
         }
         return absoluteURI;
+    }
+
+    static HttpMethod toNettyHttpMethod(org.stool.myserver.core.http.HttpMethod method) {
+        switch (method) {
+            case CONNECT: {
+                return HttpMethod.CONNECT;
+            }
+            case GET: {
+                return HttpMethod.GET;
+            }
+            case PUT: {
+                return HttpMethod.PUT;
+            }
+            case POST: {
+                return HttpMethod.POST;
+            }
+            case DELETE: {
+                return HttpMethod.DELETE;
+            }
+            case HEAD: {
+                return HttpMethod.HEAD;
+            }
+            case OPTIONS: {
+                return HttpMethod.OPTIONS;
+            }
+            case TRACE: {
+                return HttpMethod.TRACE;
+            }
+            case PATCH: {
+                return HttpMethod.PATCH;
+            }
+            default: {
+                return HttpMethod.GET;
+            }
+        }
     }
 }
