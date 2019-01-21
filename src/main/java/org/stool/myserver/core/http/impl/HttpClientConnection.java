@@ -15,7 +15,11 @@ import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
 import org.stool.myserver.core.net.SocketAddress;
 import org.stool.myserver.core.net.impl.BaseConnection;
+import org.stool.myserver.core.net.impl.MyNettyHandler;
+import org.stool.myserver.core.net.impl.SocketAddressImpl;
 import org.stool.myserver.core.streams.InboundBuffer;
+
+import java.net.InetSocketAddress;
 
 
 public class HttpClientConnection extends HttpBaseConnection implements org.stool.myserver.core.http.HttpClientConnection {
@@ -32,7 +36,7 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
     private boolean close;
     private boolean upgraded;
     private int keepAliveTimeout;
-    private int seq;
+    private int seq = 1;
 
     public HttpClientConnection(ConnectionListener<HttpClientConnection> listener,
                                 HttpClient client,
@@ -51,47 +55,168 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
 
     @Override
     protected void handleInterestedOpsChanged() {
-
+        if (!isNotWritable()) {
+            if (requestInProgress != null) {
+                requestInProgress.request.handleDrained();
+            }
+        }
     }
 
     @Override
     public void handleMessage(Object msg) {
+        Throwable error = validateMessage(msg);
+        if (error != null) {
+            fail(error);
+        } else if (msg instanceof HttpObject) {
+            HttpObject obj = (HttpObject) msg;
+            handleHttpMessage(obj);
+        } else {
+            throw new IllegalStateException("Invalid object " + msg);
+        }
+    }
 
+    private void handleHttpMessage(HttpObject obj) {
+        if (obj instanceof HttpResponse) {
+            handleResponseBegin((HttpResponse) obj);
+        } else if (obj instanceof HttpContent) {
+            HttpContent chunk = (HttpContent) obj;
+            if (chunk.content().isReadable()) {
+                Buffer buff = Buffer.buffer(MyNettyHandler.safeBuffer(chunk.content(), chctx.alloc()));
+                handleResponseChunk(buff);
+            }
+            if (chunk instanceof LastHttpContent) {
+                handleResponseEnd((LastHttpContent) chunk);
+            }
+        }
+    }
+
+    private void handleResponseEnd(LastHttpContent trailer) {
+        StreamImpl stream;
+        synchronized (this) {
+            stream = responseInProgress;
+            responseInProgress = stream.next;
+        }
+        if (stream.endResponse(trailer)) {
+            checkLifecycle();
+        }
+    }
+
+    private void checkLifecycle() {
+        if (upgraded) {
+
+        } else if (close) {
+            close();
+        } else {
+            recycle();
+        }
+    }
+
+    private void handleResponseChunk(Buffer buff) {
+        StreamImpl resp;
+        synchronized (this) {
+            resp = responseInProgress;
+        }
+        if (resp != null) {
+            if (!resp.handleChunk(buff)) {
+                doPause();
+            }
+        }
+    }
+
+    private void handleResponseBegin(HttpResponse resp) {
+        StreamImpl stream;
+        HttpClientResponse response;
+        HttpClientRequest request;
+        Throwable err;
+        synchronized (this) {
+            stream = responseInProgress;
+            request = stream.request;
+            try {
+                response = stream.beginResponse(resp);
+                err = null;
+            } catch (Exception e) {
+                err = e;
+                response = null;
+            }
+        }
+        if (response != null) {
+            request.handleResponse(response);
+        } else {
+            request.handleException(err);
+        }
+    }
+
+
+    private Throwable validateMessage(Object msg) {
+        return null;
     }
 
     @Override
     public Channel channel() {
-        return null;
+        return chctx.channel();
     }
 
     @Override
     public ChannelHandlerContext channelHandlerContext() {
-        return null;
+        return chctx;
     }
 
     @Override
     public void close() {
-
+        endReadAndFlush();
+        chctx.channel().close();
     }
 
     @Override
     public void createStream(Handler<AsyncResult<HttpClientStream>> handler) {
-
+        StreamImpl stream;
+        synchronized (this) {
+            stream = new StreamImpl(this, seq++,handler);
+            if (requestInProgress != null) {
+                requestInProgress.append(stream);
+                return ;
+            }
+            requestInProgress = stream;
+        }
+        stream.fut.complete(stream);
     }
 
     @Override
     public Context getContext() {
-        return null;
+        return context;
     }
 
     @Override
     public SocketAddress remoteAddress() {
-        return null;
+        InetSocketAddress addr = (InetSocketAddress) chctx.channel().remoteAddress();
+        if (addr == null) return null;
+        return new SocketAddressImpl(addr);
     }
 
     @Override
     public SocketAddress localAddress() {
-        return null;
+        InetSocketAddress addr = (InetSocketAddress) chctx.channel().localAddress();
+        if (addr == null) return null;
+        return new SocketAddressImpl(addr);
+    }
+
+    private void handleRequestEnd(boolean recycle) {
+        StreamImpl next;
+        synchronized (this) {
+            next = requestInProgress.next;
+            requestInProgress = next;
+        }
+        if (recycle) {
+            checkLifecycle();
+        }
+        if (next != null) {
+            next.fut.complete(next);
+        }
+    }
+
+    private void recycle() {
+        long expiration = keepAliveTimeout == 0 ? 0L : System.currentTimeMillis() + keepAliveTimeout * 1000;
+        listener.onRecycle(expiration);
     }
 
     private static class StreamImpl implements HttpClientStream {
@@ -107,11 +232,11 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
         private InboundBuffer<Buffer> queue;
         private StreamImpl next;
 
-        public StreamImpl(int id, HttpClientConnection conn, Future<HttpClientStream> fut) {
-            this.id = id;
+        StreamImpl(HttpClientConnection conn, int id, Handler<AsyncResult<HttpClientStream>> handler) {
             this.conn = conn;
-            this.fut = fut;
-            this.queue = new InboundBuffer<>(conn.getContext(), 5);
+            this.fut = Future.<HttpClientStream>future().setHandler(handler);
+            this.id = id;
+            this.queue = new InboundBuffer<>(conn.context, 5);
         }
 
         private void append(StreamImpl s) {
@@ -192,8 +317,16 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
         }
 
         @Override
-        public void writeBuffer(ByteBuf buf, boolean end) {
-
+        public void writeBuffer(ByteBuf buff, boolean end) {
+            if (end) {
+                if (buff != null && buff.isReadable()) {
+                    conn.writeToChannel(new DefaultLastHttpContent(buff, false));
+                } else {
+                    conn.writeToChannel(LastHttpContent.EMPTY_LAST_CONTENT);
+                }
+            } else if (buff != null) {
+                conn.writeToChannel(new DefaultHttpContent(buff));
+            }
         }
 
         @Override
@@ -223,22 +356,106 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
 
         @Override
         public void reset(long code) {
-
+            synchronized (conn) {
+                if (!reset) {
+                    reset = true;
+                    if (conn.requestInProgress == this) {
+                        if (request == null) {
+                            conn.requestInProgress = null;
+                            conn.recycle();
+                        } else {
+                            conn.close();
+                        }
+                    } else if (!responseEnded) {
+                        conn.close();
+                    }
+                }
+            }
         }
 
         @Override
         public void beginRequest(HttpClientRequest req) {
-
+            synchronized (conn) {
+                if (request != null) {
+                    throw new IllegalStateException("Already writing a request");
+                }
+                if (conn.requestInProgress != this) {
+                    throw new IllegalStateException("Connection is already writing another request");
+                }
+                request = req;
+            }
         }
 
         @Override
         public void endRequest() {
+            boolean doRecycle;
+            synchronized (conn) {
+                StreamImpl s = conn.requestInProgress;
+                if (s != this) {
+                    throw new IllegalStateException("No write in progress");
+                }
+                if (responseEnded) {
+                    throw new IllegalStateException("Request already sent");
+                }
+                requestEnded = true;
 
+                doRecycle = responseEnded;
+            }
+            conn.handleRequestEnd(doRecycle);
         }
 
         @Override
         public NetSocket createNetSocket() {
             return null;
         }
+
+        private HttpClientResponse beginResponse(HttpResponse resp) {
+            // todo
+            response = new HttpClientResponseImpl(request, this, resp.status().code(), resp.status().reasonPhrase(), resp.headers());
+            return null;
+        }
+
+        private boolean endResponse(LastHttpContent trailer) {
+            synchronized (conn) {
+                if (queue.isEmpty()) {
+                    response.handleEnd(trailer);
+                }
+                requestEnded = true;
+                conn.close |= !conn.options.isKeepAlive();
+                conn.doResume();
+                return requestEnded;
+            }
+        }
+
+        void handleException(Throwable cause) {
+            HttpClientRequest request;
+            HttpClientResponse response;
+            Future<HttpClientStream> fut;
+            boolean requestEnded;
+            synchronized (conn) {
+                request = this.request;
+                response = this.response;
+                fut = this.fut;
+                requestEnded = this.requestEnded;
+            }
+            if (request != null) {
+                if (response == null) {
+                    request.handleException(cause);
+                } else {
+                    if (!requestEnded) {
+                        request.handleException(cause);
+                    }
+                    response.handleException(cause);
+                }
+            } else {
+                fut.tryFail(cause);
+            }
+        }
+
+        public boolean handleChunk(Buffer buff) {
+            return queue.write(buff);
+        }
     }
+
+
 }

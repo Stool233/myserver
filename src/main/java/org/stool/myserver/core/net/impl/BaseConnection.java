@@ -38,8 +38,8 @@ public abstract class BaseConnection {
     }
 
 
-    public ChannelHandler handler() {
-        return chctx.handler();
+    public MyNettyHandler handler() {
+        return (MyNettyHandler) chctx.handler();
     }
 
     public synchronized final void startRead() {
@@ -203,6 +203,8 @@ public abstract class BaseConnection {
         config.setWriteBufferWaterMark(new WriteBufferWaterMark(size / 2, size));
     }
 
-
+    public void fail(Throwable error) {
+        handler().fail(error);
+    }
 
 }
