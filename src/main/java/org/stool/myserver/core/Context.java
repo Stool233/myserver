@@ -71,6 +71,14 @@ public interface Context {
 
     EventLoop getEventLoop();
 
+    EventLoop nettyEventLoop();
+
+    void addCloseHook(Closeable hook);
+
+    void removeCloseHook(Closeable hook);
+
+    void runCloseHooks(Handler<AsyncResult<Void>> completionHandler);
+
     /**
      * 上下文任务
      */

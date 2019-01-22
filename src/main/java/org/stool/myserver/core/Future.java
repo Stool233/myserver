@@ -140,4 +140,5 @@ public interface Future<T> extends AsyncResult<T>, Handler<AsyncResult<T>> {
     }
 
 
+    Handler<AsyncResult<T>> getHandler();
 }

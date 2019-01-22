@@ -153,4 +153,9 @@ public class FutureImpl<T> implements Future<T> {
             return "Future{unresolved}";
         }
     }
+
+    @Override
+    public Handler<AsyncResult<T>> getHandler() {
+        return handler;
+    }
 }

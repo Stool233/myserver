@@ -33,4 +33,8 @@ public interface EntryPoint {
     Context getContext();
 
     void runOnContext(Handler<Void> action);
+
+    long setTimer(long delay, Handler<Long> handler);
+
+    boolean cancelTimer(long currentTimeoutTimerId);
 }

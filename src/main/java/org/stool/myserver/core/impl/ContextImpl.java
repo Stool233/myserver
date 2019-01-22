@@ -1,6 +1,9 @@
 package org.stool.myserver.core.impl;
 
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stool.myserver.core.*;
 
 import java.util.Map;
@@ -8,14 +11,18 @@ import java.util.concurrent.ExecutorService;
 
 public abstract class ContextImpl implements Context {
 
+    private static final Logger log = LoggerFactory.getLogger(ContextImpl.class);
+
     private EntryPoint owner;
     private EventLoop eventLoop;
     private ExecutorService workerPool;
+    private CloseHooks closeHooks;
 
     public ContextImpl(EntryPoint owner) {
         this.owner = owner;
         this.eventLoop = getEventLoop(owner);
         workerPool = owner.getWorkerPool();
+        this.closeHooks = new CloseHooks(log);
     }
 
     public static boolean isOnMyThread(boolean worker) {
@@ -150,4 +157,28 @@ public abstract class ContextImpl implements Context {
     public EventLoop getEventLoop() {
         return eventLoop;
     }
+
+
+    @Override
+    public EventLoop nettyEventLoop() {
+        return eventLoop;
+    }
+
+    @Override
+    public void addCloseHook(Closeable hook) {
+        closeHooks.add(hook);
+    }
+
+    @Override
+    public void removeCloseHook(Closeable hook) {
+        closeHooks.remove(hook);
+    }
+
+    @Override
+    public void runCloseHooks(Handler<AsyncResult<Void>> completionHandler) {
+        closeHooks.run(completionHandler);
+        // Now remove context references from threads
+        MyThreadFactory.unsetContext(this);
+    }
+
 }

@@ -262,6 +262,7 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
             return conn.context;
         }
 
+        @Override
         public void writeHead(HttpMethod method, String uri, HttpHeaders headers, String hostHeader, boolean chunked, ByteBuf buf, boolean end) {
             HttpRequest request = createRequest(method, uri, headers);
             prepareRequestHeaders(request, hostHeader, chunked);
@@ -410,9 +411,36 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
         }
 
         private HttpClientResponse beginResponse(HttpResponse resp) {
-            // todo
             response = new HttpClientResponseImpl(request, this, resp.status().code(), resp.status().reasonPhrase(), resp.headers());
-            return null;
+
+            if (request.method() != HttpMethod.CONNECT) {
+                String responseConnectionHeader = resp.headers().get(HttpHeaderNames.CONNECTION);
+                HttpVersion protocolVersion = resp.protocolVersion();
+                String requestConnectionHeader = request.headers().get(HttpHeaderNames.CONNECTION);
+                if (HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(responseConnectionHeader) ||
+                        HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(requestConnectionHeader)) {
+                    conn.close = true;
+                }
+                String keepaAliveHeader = resp.headers().get(HttpHeaderNames.KEEP_ALIVE);
+                if (keepaAliveHeader != null) {
+                    int timeout = HttpUtils.parseKeepAliveHeaderTimeout(keepaAliveHeader);
+                    if (timeout != -1) {
+                        conn.keepAliveTimeout = timeout;
+                    }
+                }
+            }
+            queue.handler(buf -> response.handleChunk(buf));
+            queue.emptyHandler(v -> {
+                if (responseEnded) {
+                    response.handleEnd(null);
+                }
+            });
+            queue.drainHandler(v -> {
+                if (!responseEnded) {
+                    conn.doResume();
+                }
+            });
+            return response;
         }
 
         private boolean endResponse(LastHttpContent trailer) {
@@ -454,6 +482,12 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
 
         public boolean handleChunk(Buffer buff) {
             return queue.write(buff);
+        }
+
+
+        @Override
+        public void reportBytesWritten(long written) {
+
         }
     }
 

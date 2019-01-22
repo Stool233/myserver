@@ -1,17 +1,17 @@
 package org.stool.myserver.core.impl;
 
 import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import org.stool.myserver.core.Context;
-import org.stool.myserver.core.EntryPoint;
-import org.stool.myserver.core.Handler;
+import org.stool.myserver.core.*;
+import org.stool.myserver.core.Future;
 import org.stool.myserver.core.http.HttpServer;
 import org.stool.myserver.core.http.impl.HttpServerImpl;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class EntryPointImpl implements EntryPoint {
 
@@ -21,6 +21,8 @@ public class EntryPointImpl implements EntryPoint {
     private ExecutorService workerPool;
 
     private ThreadFactory threadFactory;
+    private final AtomicLong timeoutCounter = new AtomicLong(0);
+    private ConcurrentMap<Long, InternalTimerHandler> timeouts = new ConcurrentHashMap<>();
 
 
     public EntryPointImpl() {
@@ -94,5 +96,87 @@ public class EntryPointImpl implements EntryPoint {
     @Override
     public HttpServer createHttpServer() {
         return new HttpServerImpl(this);
+    }
+
+    @Override
+    public long setTimer(long delay, Handler<Long> handler) {
+        return scheduleTimeout(getOrCreateContext(), handler, delay, false);
+    }
+
+    private long scheduleTimeout(Context context, Handler<Long> handler, long delay, boolean periodic) {
+        long timerId = timeoutCounter.getAndIncrement();
+        InternalTimerHandler task = new InternalTimerHandler(timerId, handler, periodic, delay, context);
+        timeouts.put(timerId, task);
+        context.addCloseHook(task);
+        return timerId;
+    }
+
+    @Override
+    public boolean cancelTimer(long id) {
+        InternalTimerHandler handler = timeouts.remove(id);
+        if (handler != null) {
+            handler.context.removeCloseHook(handler);
+            return handler.cancel();
+        } else {
+            return false;
+        }
+    }
+
+    private class InternalTimerHandler implements Handler<Void>, Closeable {
+        final Handler<Long> handler;
+        final boolean periodic;
+        final long timerID;
+        final Context context;
+        final java.util.concurrent.Future<?> future;
+        final AtomicBoolean cancelled;
+
+        boolean cancel() {
+            if (cancelled.compareAndSet(false, true)) {
+                future.cancel(false);
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        InternalTimerHandler(long timerID, Handler<Long> runnable, boolean periodic, long delay, Context context) {
+            this.context = context;
+            this.timerID = timerID;
+            this.handler = runnable;
+            this.periodic = periodic;
+            this.cancelled = new AtomicBoolean();
+            EventLoop el = context.getEventLoop();
+            Runnable toRun = () -> context.runOnContext(this);
+            if (periodic) {
+                future = el.scheduleAtFixedRate(toRun, delay, delay, TimeUnit.MILLISECONDS);
+            } else {
+                future = el.schedule(toRun, delay, TimeUnit.MILLISECONDS);
+            }
+        }
+
+        public void handle(Void v) {
+            if (!cancelled.get()) {
+                try {
+                    handler.handle(timerID);
+                } finally {
+                    if (!periodic) {
+                        cleanupNonPeriodic();
+                    }
+                }
+            }
+        }
+
+        private void cleanupNonPeriodic() {
+            EntryPointImpl.this.timeouts.remove(timerID);
+            Context context = getContext();
+            if (context != null) {
+                context.removeCloseHook(this);
+            }
+        }
+        public void close(Handler<AsyncResult<Void>> completionHandler) {
+            EntryPointImpl.this.timeouts.remove(timerID);
+            cancel();
+            completionHandler.handle(Future.succeededFuture());
+        }
     }
 }

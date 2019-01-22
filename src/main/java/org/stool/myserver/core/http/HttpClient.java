@@ -1,10 +1,8 @@
 package org.stool.myserver.core.http;
 
-import org.stool.myserver.core.AsyncResult;
-import org.stool.myserver.core.EntryPoint;
-import org.stool.myserver.core.Future;
-import org.stool.myserver.core.Handler;
+import org.stool.myserver.core.*;
 import org.stool.myserver.core.http.impl.HttpClientOptions;
+import org.stool.myserver.core.http.impl.HttpClientStream;
 
 import java.util.function.Function;
 
@@ -24,5 +22,13 @@ public interface HttpClient {
     EntryPoint getEntryPoint();
 
     HttpClientOptions getOptions();
+
+    Handler<HttpConnection> connectionHandler();
+
+    void getConnectionForRequest(Context ctx,
+                                 String peerHost,
+                                 int port,
+                                 String host,
+                                 Handler<AsyncResult<HttpClientStream>> handler);
 
 }
