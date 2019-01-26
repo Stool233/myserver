@@ -24,6 +24,11 @@ public class HttpClientOptions {
 
     public static final int DEFAULT_MAX_WAIT_QUEUE_SIZE = -1;
 
+    /**
+     * Default pool cleaner period = 1000 ms (1 second)
+     */
+    public static final int DEFAULT_POOL_CLEANER_PERIOD = 1000;
+
     private int maxPoolSize;
     private boolean keepAlive;
     private int keepAliveTimeout;
@@ -32,6 +37,7 @@ public class HttpClientOptions {
     private int maxInitialLineLength;
     private int maxHeaderSize;
     private int maxWaitQueueSize;
+    private int poolCleanerPeriod;
 
     public HttpClientOptions() {
         this.maxPoolSize = DEFAULT_MAX_POOL_SIZE;
@@ -41,6 +47,7 @@ public class HttpClientOptions {
         this.maxInitialLineLength = DEFAULT_MAX_INITIAL_LINE_LENGTH;
         this.maxHeaderSize = DEFAULT_MAX_HEADER_SIZE;
         this.maxWaitQueueSize = DEFAULT_MAX_WAIT_QUEUE_SIZE;
+        poolCleanerPeriod = DEFAULT_POOL_CLEANER_PERIOD;
 
     }
 
@@ -70,5 +77,9 @@ public class HttpClientOptions {
 
     public int getMaxWaitQueueSize() {
         return maxWaitQueueSize;
+    }
+
+    public int getPoolCleanerPeriod() {
+        return poolCleanerPeriod;
     }
 }

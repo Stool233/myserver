@@ -7,6 +7,8 @@ import org.stool.myserver.core.*;
 import org.stool.myserver.core.impl.ContextImpl;
 import org.stool.myserver.core.net.SocketAddress;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 
 /**
@@ -15,6 +17,7 @@ import java.net.InetSocketAddress;
 public abstract class BaseConnection {
 
     private static final Logger log = LoggerFactory.getLogger(BaseConnection.class);
+    private static final int MAX_REGION_SIZE = 1024 * 1024;
 
     protected final EntryPoint entryPoint;
     protected final ChannelHandlerContext chctx;
@@ -205,6 +208,41 @@ public abstract class BaseConnection {
 
     public void fail(Throwable error) {
         handler().fail(error);
+    }
+
+    public ChannelOutboundInvoker channelHandlerContext() {
+        return chctx;
+    }
+
+    public final ChannelFuture sendFile(RandomAccessFile raf, long offset, long length) throws IOException {
+        ChannelPromise writeFuture = chctx.newPromise();
+        sendFileRegion(raf, offset, length, writeFuture);
+        if (writeFuture != null) {
+            writeFuture.addListener(future -> raf.close());
+        } else {
+            raf.close();
+        }
+        return writeFuture;
+    }
+
+    private void sendFileRegion(RandomAccessFile file, long offset, long length, ChannelPromise writeFuture) {
+        if (length <MAX_REGION_SIZE) {
+            writeToChannel(new DefaultFileRegion(file.getChannel(), offset, length), writeFuture);
+        } else {
+            ChannelPromise promise = chctx.newPromise();
+            FileRegion region = new DefaultFileRegion(file.getChannel(), offset, MAX_REGION_SIZE);
+
+            region.retain();
+            writeToChannel(region, promise);
+            promise.addListener(future -> {
+                if (future.isSuccess()) {
+                    sendFileRegion(file, offset + MAX_REGION_SIZE, length - MAX_REGION_SIZE, writeFuture);
+                } else {
+                    future.cause().printStackTrace();
+                    writeFuture.setFailure(future.cause());
+                }
+            });
+        }
     }
 
 }

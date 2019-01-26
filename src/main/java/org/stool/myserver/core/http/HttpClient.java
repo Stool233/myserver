@@ -1,5 +1,6 @@
 package org.stool.myserver.core.http;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import org.stool.myserver.core.*;
 import org.stool.myserver.core.http.impl.HttpClientOptions;
 import org.stool.myserver.core.http.impl.HttpClientStream;
@@ -7,9 +8,10 @@ import org.stool.myserver.core.http.impl.HttpClientStream;
 import java.util.function.Function;
 
 public interface HttpClient {
-    HttpClientRequest request(HttpMethod method, String host, int port, String requestURI);
 
-    HttpClientRequest request(HttpMethod method, String host, int port, String requestURI, Handler<AsyncResult<HttpClientResponse>> responseHandler);
+    HttpClientRequest request(HttpMethod method, String host, int port, String requestURI, HttpHeaders headers);
+
+    HttpClientRequest request(HttpMethod method, String host, int port, String requestURI, HttpHeaders headers, Handler<AsyncResult<HttpClientResponse>> responseHandler);
 
     HttpClient connectionHandler(Handler<HttpConnection> handler);
 

@@ -1,9 +1,12 @@
 package org.stool.myserver.core;
 
 import io.netty.channel.EventLoopGroup;
+import org.stool.myserver.core.http.HttpClient;
 import org.stool.myserver.core.http.HttpServer;
+import org.stool.myserver.core.http.impl.HttpClientOptions;
 import org.stool.myserver.core.impl.EntryPointImpl;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -19,6 +22,8 @@ public interface EntryPoint {
 
     HttpServer createHttpServer();
 
+    HttpClient createHttpClient();
+
     static EntryPoint entryPoint() {
         return new EntryPointImpl();
     }
@@ -33,6 +38,8 @@ public interface EntryPoint {
     Context getContext();
 
     void runOnContext(Handler<Void> action);
+
+    File resolveFile(String fileName);
 
     long setTimer(long delay, Handler<Long> handler);
 

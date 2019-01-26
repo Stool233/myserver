@@ -12,6 +12,8 @@ public interface HttpClientRequest {
 
     HttpClientRequest write(Buffer data);
 
+    HttpClientRequest setHeader(HttpHeaders headers);
+
     HttpClientRequest setWriteQueueMaxSize(int maxSize);
 
     HttpClientRequest drainHandler(Handler<Void> handler);

@@ -1,7 +1,9 @@
 package org.stool.myserver.core.http;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import org.stool.myserver.core.AsyncResult;
 import org.stool.myserver.core.Handler;
+import org.stool.myserver.core.http.impl.HttpServerResponseImpl;
 import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
 
@@ -62,4 +64,17 @@ public interface HttpServerResponse {
     HttpServerResponse bodyEndHandler(Handler<Void> handler);
 
     void handleDrained();
+
+    HttpServerResponseImpl sendFile(String filename, long offset, long length);
+
+    HttpServerResponse sendFile(String filename, long start, long end, Handler<AsyncResult<Void>> resultHandler);
+
+    default HttpServerResponse sendFile(String filename) {
+        return sendFile(filename, 0);
+    }
+
+    default HttpServerResponse sendFile(String filename, long offset) {
+        return sendFile(filename, offset, Long.MAX_VALUE);
+    }
+
 }

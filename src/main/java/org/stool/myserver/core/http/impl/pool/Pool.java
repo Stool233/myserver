@@ -89,13 +89,13 @@ public class Pool<C> {
 
     public Pool(Context context,
                 ConnectionProvider<C> connector,
-                Consumer<C> connectionAdded,
-                Consumer<C> connectionRemoved,
                 int queueMaxSize,
-                boolean fifo,
                 long initialWeight,
                 long maxWeight,
-                Handler<Void> poolClosed) {
+                Handler<Void> poolClosed,
+                Consumer<C> connectionAdded,
+                Consumer<C> connectionRemoved,
+                boolean fifo) {
         this.context = context;
         this.connector = connector;
         this.connectionAdded = connectionAdded;

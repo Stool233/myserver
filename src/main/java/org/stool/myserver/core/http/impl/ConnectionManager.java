@@ -1,13 +1,14 @@
 package org.stool.myserver.core.http.impl;
 
+import io.netty.channel.Channel;
 import org.stool.myserver.core.AsyncResult;
 import org.stool.myserver.core.Context;
+import org.stool.myserver.core.Future;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpClient;
 import org.stool.myserver.core.http.HttpClientConnection;
 import org.stool.myserver.core.http.impl.pool.Pool;
 
-import java.nio.channels.Channel;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,24 +20,61 @@ public class ConnectionManager {
     private final Map<Channel, HttpClientConnection> connectionMap = new ConcurrentHashMap<>();
     private final Map<EndpointKey,Endpoint> endpointMap = new ConcurrentHashMap<>();
     private final long maxSize;
+    private long timerID;
 
-    public ConnectionManager(int maxWaitQueueSize, HttpClient client, long maxSize) {
+    public ConnectionManager(HttpClient client, long maxSize, int maxWaitQueueSize) {
         this.maxWaitQueueSize = maxWaitQueueSize;
         this.client = client;
         this.maxSize = maxSize;
     }
 
-    synchronized void start() {
-
+    public synchronized void start() {
+        long period = client.getOptions().getPoolCleanerPeriod();
+        this.timerID = period > 0 ? client.getEntryPoint().setTimer(period, id -> checkExpired(period)) : -1;
     }
 
-    void getConnection(Context ctx, String peerHost, int port, String host, Handler<AsyncResult<HttpClientConnection>>) {
+    private synchronized void checkExpired(long period) {
+        long timestamp = System.currentTimeMillis();
+        endpointMap.values().forEach(e -> e.pool.closeIdle(timestamp));
+        timerID = client.getEntryPoint().setTimer(period, id -> checkExpired(period));
+    }
+
+    void getConnection(Context ctx, String peerHost, int port, String host, Handler<AsyncResult<HttpClientConnection>> handler) {
         EndpointKey key = new EndpointKey(port, peerHost, host);
         while(true) {
             Endpoint endpoint = endpointMap.computeIfAbsent(key, targetAddress -> {
-                int maxPoolSize = 8;
-                HttpChannelConnector
-            })
+                HttpChannelConnector connector = new HttpChannelConnector(client, peerHost, host, port);
+                Pool<HttpClientConnection> pool = new Pool<>(ctx, connector, maxWaitQueueSize, connector.weight(), maxSize,
+                        v -> endpointMap.remove(key),
+                        conn -> connectionMap.put(conn.channel(), conn),
+                        conn -> connectionMap.remove(conn.channel(), conn),
+                        false);
+                return new Endpoint(pool);
+            });
+
+            if (endpoint.pool.getConnection(ar -> {
+                if (ar.succeeded()) {
+                    HttpClientConnection conn = ar.result();
+                    handler.handle(Future.succeededFuture(conn));
+                } else {
+                    handler.handle(Future.failedFuture(ar.cause()));
+                }
+            })) {
+                break;
+            }
+        }
+    }
+
+    public void close() {
+        synchronized (this) {
+            if (timerID >= 0) {
+                client.getEntryPoint().cancelTimer(timerID);
+                timerID = -1;
+            }
+        }
+        endpointMap.clear();
+        for (HttpClientConnection conn : connectionMap.values()) {
+            conn.close();
         }
     }
 

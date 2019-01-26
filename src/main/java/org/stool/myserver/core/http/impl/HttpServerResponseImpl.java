@@ -2,16 +2,20 @@ package org.stool.myserver.core.http.impl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.stool.myserver.core.EntryPoint;
-import org.stool.myserver.core.Handler;
+import org.stool.myserver.core.*;
 import org.stool.myserver.core.http.HttpServerResponse;
 import org.stool.myserver.core.net.Buffer;
 import org.stool.myserver.core.net.NetSocket;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Map;
 
 public class HttpServerResponseImpl implements HttpServerResponse {
@@ -363,6 +367,111 @@ public class HttpServerResponseImpl implements HttpServerResponse {
         }
         if (closedHandler != null) {
             closedHandler.handle(null);
+        }
+    }
+
+    @Override
+    public HttpServerResponseImpl sendFile(String filename, long offset, long length) {
+        doSendFile(filename, offset, length, null);
+        return this;
+    }
+
+    @Override
+    public HttpServerResponse sendFile(String filename, long start, long end, Handler<AsyncResult<Void>> resultHandler) {
+        doSendFile(filename, start, end, resultHandler);
+        return this;
+    }
+
+    private void doSendFile(String filename, long offset, long length, Handler<AsyncResult<Void>> resultHandler) {
+        synchronized (conn) {
+            if (headWritten) {
+                throw new IllegalStateException("Head already written");
+            }
+            checkValid();
+            File file = entryPoint.resolveFile(filename);
+
+            if (!file.exists()) {
+                if (resultHandler != null) {
+                    Context ctx = entryPoint.getOrCreateContext();
+                    ctx.runOnContext(v -> resultHandler.handle(Future.failedFuture(new FileNotFoundException())));
+                } else {
+                    log.error("File not found: " + filename);
+                }
+                return ;
+            }
+
+            long contentLength = Math.min(length, file.length() - offset);
+            bytesWritten = contentLength;
+            if (!headers.contains(HttpHeaderNames.CONTENT_TYPE)) {
+                String contentType = MimeMapping.getMimeTypeForFilename(filename);
+                if (contentType != null) {
+                    headers.set(HttpHeaderNames.CONTENT_TYPE, contentType);
+                }
+            }
+            prepareHeaders(bytesWritten);
+
+            ChannelFuture channelFuture;
+            RandomAccessFile raf = null;
+            try {
+                raf = new RandomAccessFile(file, "r");
+                conn.writeToChannel(new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, headers));
+                channelFuture = conn.sendFile(raf, Math.min(offset, file.length()), contentLength);
+            } catch (IOException e) {
+                try {
+                    if (raf != null) {
+                        raf.close();
+                    }
+                } catch (IOException ignore) {
+
+                }
+                if (resultHandler != null) {
+                    Context ctx = entryPoint.getOrCreateContext();
+                    ctx.runOnContext(v -> resultHandler.handle(Future.failedFuture(e)));
+                } else {
+                    log.error("Failed to send file", e);
+                }
+                return ;
+            }
+            written = true;
+
+            Context ctx = entryPoint.getOrCreateContext();
+            channelFuture.addListener(future -> {
+                // write an empty last content to let the http encoder know the response is complete
+                if (future.isSuccess()) {
+                    ChannelPromise pr = conn.channelHandlerContext().newPromise();
+                    conn.writeToChannel(LastHttpContent.EMPTY_LAST_CONTENT, pr);
+                    if (!keepAlive) {
+                        pr.addListener(a -> {
+                            closeConnAfterWrite();
+                        });
+                    }
+                }
+
+                // signal completion handler when there is one
+                if (resultHandler != null) {
+                    AsyncResult<Void> res;
+                    if (future.isSuccess()) {
+                        res = Future.succeededFuture();
+                    } else {
+                        res = Future.failedFuture(future.cause());
+                    }
+                    ctx.executeFromIO(v -> resultHandler.handle(res));
+                }
+
+                // signal body end handler
+                Handler<Void> handler;
+                synchronized (conn) {
+                    handler = bodyEndHandler;
+                }
+                if (handler != null) {
+                    ctx.executeFromIO(v -> {
+                        handler.handle(null);
+                    });
+                }
+
+                // allow to write next response
+                conn.responseComplete();
+            });
         }
     }
 }

@@ -6,9 +6,15 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.stool.myserver.core.*;
 import org.stool.myserver.core.Future;
+import org.stool.myserver.core.file.FileSystemOptions;
+import org.stool.myserver.core.file.impl.FileResolver;
+import org.stool.myserver.core.http.HttpClient;
 import org.stool.myserver.core.http.HttpServer;
+import org.stool.myserver.core.http.impl.HttpClientImpl;
+import org.stool.myserver.core.http.impl.HttpClientOptions;
 import org.stool.myserver.core.http.impl.HttpServerImpl;
 
+import java.io.File;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,6 +30,8 @@ public class EntryPointImpl implements EntryPoint {
     private final AtomicLong timeoutCounter = new AtomicLong(0);
     private ConcurrentMap<Long, InternalTimerHandler> timeouts = new ConcurrentHashMap<>();
 
+    private final FileResolver fileResolver;
+
 
     public EntryPointImpl() {
 
@@ -33,6 +41,7 @@ public class EntryPointImpl implements EntryPoint {
         ioworkerEventLoopGroup = eventLoopGroup(4, threadFactory, 50);
         workerPool = Executors.newFixedThreadPool(20, threadFactory);
 
+        fileResolver = new FileResolver(new FileSystemOptions());
     }
 
     private EventLoopGroup eventLoopGroup(int nThreads, ThreadFactory threadFactory, int ioRatio) {
@@ -96,6 +105,16 @@ public class EntryPointImpl implements EntryPoint {
     @Override
     public HttpServer createHttpServer() {
         return new HttpServerImpl(this);
+    }
+
+    @Override
+    public HttpClient createHttpClient() {
+        return new HttpClientImpl(this);
+    }
+
+    @Override
+    public File resolveFile(String fileName) {
+        return fileResolver.resolveFile(fileName);
     }
 
     @Override
