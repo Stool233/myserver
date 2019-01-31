@@ -34,7 +34,6 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
     private StreamImpl responseInProgress;
 
     private boolean close;
-    private boolean upgraded;
     private int keepAliveTimeout;
     private int seq = 1;
 
@@ -102,9 +101,7 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
     }
 
     private void checkLifecycle() {
-        if (upgraded) {
-
-        } else if (close) {
+        if (close) {
             close();
         } else {
             recycle();

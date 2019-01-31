@@ -2,25 +2,23 @@ package org.stool.myserver.core.net.impl;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import org.stool.myserver.core.AsyncResult;
-import org.stool.myserver.core.Context;
-import org.stool.myserver.core.Handler;
+import io.netty.channel.ChannelFuture;
+import org.stool.myserver.core.*;
 import org.stool.myserver.core.net.ProxyOptions;
 import org.stool.myserver.core.net.SocketAddress;
 
+import java.net.InetSocketAddress;
 
 
 public class ChannelProvider {
 
     private final Bootstrap bootstrap;
     private final Context context;
-    private final ProxyOptions proxyOptions;
     private Channel channel;
 
-    public ChannelProvider(Bootstrap bootstrap, Context context, ProxyOptions proxyOptions) {
+    public ChannelProvider(Bootstrap bootstrap, Context context) {
         this.bootstrap = bootstrap;
         this.context = context;
-        this.proxyOptions = proxyOptions;
     }
 
     public Channel channel() {
@@ -35,9 +33,22 @@ public class ChannelProvider {
                 context.getEventLoop().execute(() -> channelHandler.handle(res));
             }
         };
-        if (proxyOptions != null) {
+        handleConnect(remoteAddress, peerAddress, serverName, handler);
+    }
 
-        }
+    private void handleConnect(SocketAddress remoteAddress, SocketAddress peerAddress, String serverName, Handler<AsyncResult<Channel>> channelHandler) {
+        ChannelFuture fut = bootstrap.connect(InetSocketAddress.createUnresolved(remoteAddress.host(), remoteAddress.port()));
+        fut.addListener(res -> {
+            if (res.isSuccess()) {
+                connected(fut.channel(), channelHandler);
+            } else {
+                channelHandler.handle(Future.failedFuture(res.cause()));
+            }
+        });
+    }
 
+    private void connected(Channel channel, Handler<AsyncResult<Channel>> channelHandler) {
+        this.channel = channel;
+        channelHandler.handle(Future.succeededFuture(this.channel));
     }
 }

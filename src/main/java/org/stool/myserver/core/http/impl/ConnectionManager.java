@@ -6,7 +6,6 @@ import org.stool.myserver.core.Context;
 import org.stool.myserver.core.Future;
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpClient;
-import org.stool.myserver.core.http.HttpClientConnection;
 import org.stool.myserver.core.http.impl.pool.Pool;
 
 import java.util.Map;
