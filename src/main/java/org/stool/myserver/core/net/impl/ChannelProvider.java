@@ -3,6 +3,7 @@ package org.stool.myserver.core.net.impl;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
 import org.stool.myserver.core.*;
 import org.stool.myserver.core.net.ProxyOptions;
 import org.stool.myserver.core.net.SocketAddress;
@@ -37,6 +38,13 @@ public class ChannelProvider {
     }
 
     private void handleConnect(SocketAddress remoteAddress, SocketAddress peerAddress, String serverName, Handler<AsyncResult<Channel>> channelHandler) {
+        bootstrap.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+
+            }
+        });
+
         ChannelFuture fut = bootstrap.connect(InetSocketAddress.createUnresolved(remoteAddress.host(), remoteAddress.port()));
         fut.addListener(res -> {
             if (res.isSuccess()) {

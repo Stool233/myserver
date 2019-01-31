@@ -166,6 +166,13 @@ public class Pool<C> {
                 toClose = null;
             }
         }
+        if (toClose != null) {
+            connector.close(holder.connection);
+        } else {
+            synchronized (this) {
+                checkProgress();
+            }
+        }
     }
 
     private boolean recycleConnection(Holder holder, long timestamp) {
@@ -313,6 +320,7 @@ public class Pool<C> {
                     break;
                 }
             }
+            task.run();
         }
     }
 

@@ -392,7 +392,7 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
                 if (s != this) {
                     throw new IllegalStateException("No write in progress");
                 }
-                if (responseEnded) {
+                if (requestEnded) {
                     throw new IllegalStateException("Request already sent");
                 }
                 requestEnded = true;
@@ -412,15 +412,14 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
 
             if (request.method() != HttpMethod.CONNECT) {
                 String responseConnectionHeader = resp.headers().get(HttpHeaderNames.CONNECTION);
-                HttpVersion protocolVersion = resp.protocolVersion();
                 String requestConnectionHeader = request.headers().get(HttpHeaderNames.CONNECTION);
                 if (HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(responseConnectionHeader) ||
                         HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(requestConnectionHeader)) {
                     conn.close = true;
                 }
-                String keepaAliveHeader = resp.headers().get(HttpHeaderNames.KEEP_ALIVE);
-                if (keepaAliveHeader != null) {
-                    int timeout = HttpUtils.parseKeepAliveHeaderTimeout(keepaAliveHeader);
+                String keepAliveHeader = resp.headers().get(HttpHeaderNames.KEEP_ALIVE);
+                if (keepAliveHeader != null) {
+                    int timeout = HttpUtils.parseKeepAliveHeaderTimeout(keepAliveHeader);
                     if (timeout != -1) {
                         conn.keepAliveTimeout = timeout;
                     }
@@ -445,7 +444,7 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
                 if (queue.isEmpty()) {
                     response.handleEnd(trailer);
                 }
-                requestEnded = true;
+                responseEnded = true;
                 conn.close |= !conn.options.isKeepAlive();
                 conn.doResume();
                 return requestEnded;
