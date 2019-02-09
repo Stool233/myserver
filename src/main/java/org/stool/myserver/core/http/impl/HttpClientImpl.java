@@ -24,12 +24,11 @@ public class HttpClientImpl implements HttpClient{
         this.creatingContext = entryPoint.getContext();
         this.options = new HttpClientOptions();
         this.keepAlive = options.isKeepAlive();
-        long maxWeight = options.getMaxPoolSize();
         this.closeHook = completionHandler -> {
             HttpClientImpl.this.close();
             completionHandler.handle(Future.succeededFuture());
         };
-        this.httpCM = new ConnectionManager(this, maxWeight, options.getMaxWaitQueueSize());
+        this.httpCM = new ConnectionManager(this, options.getMaxPoolSize(), options.getMaxWaitQueueSize());
         this.httpCM.start();
     }
 

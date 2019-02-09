@@ -1,6 +1,7 @@
 package org.stool.myserver.core.http.impl;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
@@ -168,7 +169,7 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
     public void createStream(Handler<AsyncResult<HttpClientStream>> handler) {
         StreamImpl stream;
         synchronized (this) {
-            stream = new StreamImpl(this, seq++,handler);
+            stream = new StreamImpl(this, seq++, handler);
             if (requestInProgress != null) {
                 requestInProgress.append(stream);
                 return ;
@@ -275,16 +276,23 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
         private void sendRequest(HttpRequest request, ByteBuf buf, boolean end) {
             if (end) {
                 if (buf != null) {
-                    request = new AssembledFullHttpRequest(request, buf);
+//                    request = new AssembledFullHttpRequest(request, buf);
+                    conn.writeToChannel(new DefaultFullHttpRequest(request.protocolVersion(), request.method(),
+                            request.uri(), buf, request.headers(), EmptyHttpHeaders.INSTANCE));
                 } else {
-                    request = new AssembledFullHttpRequest(request);
+//                    request = new AssembledFullHttpRequest(request);
+                    conn.writeToChannel(new DefaultFullHttpRequest(request.protocolVersion(), request.method(),
+                            request.uri(), Unpooled.EMPTY_BUFFER, request.headers(), EmptyHttpHeaders.INSTANCE));
                 }
             } else {
                 if (buf != null) {
-                    request = new AssembledHttpRequest(request, buf);
+//                    request = new AssembledHttpRequest(request, buf);
+                    conn.writeToChannel(new DefaultHttpRequest(request.protocolVersion(), request.method(),
+                            request.uri(), request.headers()));
+                    conn.writeToChannel(new DefaultHttpContent(buf));
                 }
             }
-            conn.writeToChannel(request);
+//            conn.writeToChannel(request);
         }
 
 
@@ -481,10 +489,6 @@ public class HttpClientConnection extends HttpBaseConnection implements org.stoo
         }
 
 
-        @Override
-        public void reportBytesWritten(long written) {
-
-        }
     }
 
 

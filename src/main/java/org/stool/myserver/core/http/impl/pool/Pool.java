@@ -72,16 +72,16 @@ public class Pool<C> {
     private final Consumer<C> connectionRemoved;
 
     private final int queueMaxSize;
-    private final Deque<Waiter<C>> waitersQueue = new ArrayDeque<>();
+    private final Deque<Waiter<C>> waitersQueue = new ArrayDeque<>();   // 等待连接
 
     private final Deque<Holder> available;                              // 存活的连接
     private final boolean fifo;
-    private long capacity;
-    private long connecting;
+    private long capacity;                                              // 存活连接的个数
+    private long connecting;                                            // 正在建立连接的连接，还没有连接完成
 
-    private final long initialWeight;
-    private final long maxWeight;
-    private long weight;
+    private final long initialWeight;   // 权重的单位，一般为1
+    private final long maxWeight;       // 最大权重，也可以简单认为是最大连接数，也就是maxPoolSize
+    private long weight;                // 当前权重
 
     private boolean checkInProgress;
     private boolean closed;
@@ -292,19 +292,34 @@ public class Pool<C> {
         return waitersQueue.size() > 0 && (canAcquireConnection() || needToCreateConnection() || canEvictWaiter());
     }
 
+    /**
+     * 连接池容量大于0，说明还有可以用的连接，不用重新创建
+     * @return
+     */
     private boolean canAcquireConnection() {
         return capacity > 0;
     }
 
-
+    /**
+     * 连接池还没到最大容量，且连接等待队列减去正在建立的连接数量，则可以建立新连接
+     * @return
+     */
     private boolean needToCreateConnection() {
         return weight < maxWeight && (waitersQueue.size() - connecting) > 0;
     }
 
+    /**
+     * 连接等待队列减去正在建立的连接数量后比queueMaxSize还大，则抛弃连接
+     * @return
+     */
     private boolean canEvictWaiter() {
         return queueMaxSize >= 0 && (waitersQueue.size() - connecting) > queueMaxSize;
     }
 
+    /**
+     * 权重数（连接数）为0，且等待队列长度为0，则可以关闭pool了
+     * @return
+     */
     private boolean canClose() {
         return weight == 0 && waitersQueue.isEmpty();
     }
@@ -326,7 +341,7 @@ public class Pool<C> {
 
     private Runnable nextTask() {
         if (waitersQueue.size() > 0) {
-            if (canAcquireConnection()) {
+            if (canAcquireConnection()) {           // 从连接池中取一个连接
                 Holder conn = available.peek();
                 capacity--;
                 if (--conn.capacity == 0) {
@@ -335,12 +350,12 @@ public class Pool<C> {
                 }
                 Waiter<C> waiter = waitersQueue.poll();
                 return () -> waiter.handler.handle(Future.succeededFuture(conn.connection));
-            } else if (needToCreateConnection()) {
+            } else if (needToCreateConnection()) {  // 建立一个新连接
                 connecting++;
                 weight += initialWeight;
                 Holder holder = new Holder();
                 return holder::connect;
-            } else if (canEvictWaiter()) {
+            } else if (canEvictWaiter()) {          // 连接太多，拒绝连接
                 Waiter<C> waiter = waitersQueue.removeLast();
                 return () -> waiter.handler.handle(Future.failedFuture(new Exception("Connection pool reached max wait queue size of " + queueMaxSize)));
             }

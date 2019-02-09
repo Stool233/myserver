@@ -1,4 +1,4 @@
-package org.stool.myserver.core.route;
+package org.stool.myserver.route;
 
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpMethod;
@@ -20,4 +20,7 @@ public interface Route {
     Route failureHandler(Handler<RoutingContext> failureHandler);
 
 
+    boolean matches(RoutingContext context);
+
+    void handleContext(RoutingContext context);
 }

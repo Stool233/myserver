@@ -13,7 +13,8 @@ public class ClientMain {
     public static void main(String[] args) {
         EntryPoint entryPoint = EntryPoint.entryPoint();
         HttpClient httpClient = entryPoint.createHttpClient();
-        HttpClientRequest request = httpClient.request(HttpMethod.GET, "127.0.0.1", 8080, "/", null, ar -> {
+        HttpClientRequest request = httpClient.request(HttpMethod.GET,
+                "127.0.0.1", 8080, "/", null, ar -> {
             if (ar.succeeded()) {
                 HttpClientResponse resp = ar.result();
                 System.out.println("Got response " + resp.statusCode());

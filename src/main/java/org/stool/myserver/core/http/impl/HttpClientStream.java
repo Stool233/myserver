@@ -31,5 +31,4 @@ public interface HttpClientStream {
 
     NetSocket createNetSocket();
 
-    void reportBytesWritten(long written);
 }

@@ -193,11 +193,11 @@ public class HttpServerResponseImpl implements HttpServerResponse {
     private void prepareHeaders(long contentLength) {
         // todo
         if (!keepAlive) {
-            headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+            headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         }
-        if (!headers.contains(HttpHeaders.Names.TRANSFER_ENCODING) && !headers.contains(HttpHeaders.Names.CONTENT_LENGTH) && contentLength >= 0) {
+        if (!headers.contains(HttpHeaderNames.TRANSFER_ENCODING) && !headers.contains(HttpHeaderNames.CONTENT_LENGTH) && contentLength >= 0) {
             String value = contentLength == 0 ? "0" : String.valueOf(contentLength);
-            headers.set(HttpHeaders.Names.CONTENT_LENGTH, value);
+            headers.set(HttpHeaderNames.CONTENT_LENGTH, value);
         }
         headWritten = true;
     }

@@ -38,7 +38,7 @@ public class EntryPointImpl implements EntryPoint {
         threadFactory = new MyThreadFactory();
 
         acceptorEventLoopGroup = eventLoopGroup(1, threadFactory, 100);
-        ioworkerEventLoopGroup = eventLoopGroup(4, threadFactory, 50);
+        ioworkerEventLoopGroup = eventLoopGroup(8, threadFactory, 50);
         workerPool = Executors.newFixedThreadPool(20, threadFactory);
 
         fileResolver = new FileResolver(new FileSystemOptions());
@@ -141,6 +141,9 @@ public class EntryPointImpl implements EntryPoint {
         }
     }
 
+    /**
+     * 实现javascript的setTimeout和setInterval
+     */
     private class InternalTimerHandler implements Handler<Void>, Closeable {
         final Handler<Long> handler;
         final boolean periodic;
@@ -149,14 +152,6 @@ public class EntryPointImpl implements EntryPoint {
         final java.util.concurrent.Future<?> future;
         final AtomicBoolean cancelled;
 
-        boolean cancel() {
-            if (cancelled.compareAndSet(false, true)) {
-                future.cancel(false);
-                return true;
-            } else {
-                return false;
-            }
-        }
 
         InternalTimerHandler(long timerID, Handler<Long> runnable, boolean periodic, long delay, Context context) {
             this.context = context;
@@ -170,6 +165,15 @@ public class EntryPointImpl implements EntryPoint {
                 future = el.scheduleAtFixedRate(toRun, delay, delay, TimeUnit.MILLISECONDS);
             } else {
                 future = el.schedule(toRun, delay, TimeUnit.MILLISECONDS);
+            }
+        }
+
+        boolean cancel() {
+            if (cancelled.compareAndSet(false, true)) {
+                future.cancel(false);
+                return true;
+            } else {
+                return false;
             }
         }
 

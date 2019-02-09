@@ -20,7 +20,6 @@ public interface HttpClientRequest {
 
     HttpClientRequest handler(Handler<AsyncResult<HttpClientResponse>> handler);
 
-    HttpClientRequest setFollowRedirects(boolean followRedirects);
 
     HttpClientRequest setChunked(boolean chunked);
 
@@ -63,9 +62,6 @@ public interface HttpClientRequest {
     HttpClientRequest write(String chunk);
 
 
-
-    HttpClientRequest continueHandler(Handler<Void> handler);
-
     HttpClientRequest sendHead();
 
     HttpClientRequest sendHead(Handler<HttpVersion> completionHandler);
@@ -80,8 +76,6 @@ public interface HttpClientRequest {
     void end();
 
     HttpClientRequest setTimeout(long timeoutMs);
-
-    HttpClientRequest pushHandler(Handler<HttpClientRequest> handler);
 
 
     boolean reset(long code);

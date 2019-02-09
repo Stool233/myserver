@@ -17,14 +17,14 @@ public class ConnectionManager {
     private final int maxWaitQueueSize;
     private final HttpClient client;
     private final Map<Channel, HttpClientConnection> connectionMap = new ConcurrentHashMap<>();
-    private final Map<EndpointKey,Endpoint> endpointMap = new ConcurrentHashMap<>();
-    private final long maxSize;
+    private final Map<EndpointKey, Endpoint> endpointMap = new ConcurrentHashMap<>();
+    private final long maxWeight;   // 总权重，也是MaxPoolSize
     private long timerID;
 
-    public ConnectionManager(HttpClient client, long maxSize, int maxWaitQueueSize) {
+    public ConnectionManager(HttpClient client, long maxWeight, int maxWaitQueueSize) {
         this.maxWaitQueueSize = maxWaitQueueSize;
         this.client = client;
-        this.maxSize = maxSize;
+        this.maxWeight = maxWeight;
     }
 
     public synchronized void start() {
@@ -40,10 +40,11 @@ public class ConnectionManager {
 
     void getConnection(Context ctx, String peerHost, int port, String host, Handler<AsyncResult<HttpClientConnection>> handler) {
         EndpointKey key = new EndpointKey(port, peerHost, host);
+        // 获取connection
         while(true) {
             Endpoint endpoint = endpointMap.computeIfAbsent(key, targetAddress -> {
                 HttpChannelConnector connector = new HttpChannelConnector(client, peerHost, host, port);
-                Pool<HttpClientConnection> pool = new Pool<>(ctx, connector, maxWaitQueueSize, connector.weight(), maxSize,
+                Pool<HttpClientConnection> pool = new Pool<>(ctx, connector, maxWaitQueueSize, connector.weight(), maxWeight,
                         v -> endpointMap.remove(key),
                         conn -> connectionMap.put(conn.channel(), conn),
                         conn -> connectionMap.remove(conn.channel(), conn),

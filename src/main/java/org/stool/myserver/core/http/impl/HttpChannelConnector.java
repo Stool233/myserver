@@ -28,7 +28,7 @@ public class HttpChannelConnector implements ConnectionProvider<HttpClientConnec
 
     public HttpChannelConnector(HttpClient client, String peerHost, String host, int port) {
         this.client = client;
-        this.weight = 8;
+        this.weight = 1;
         this.maxConcurrency = 1;
         this.peerHost = peerHost;
         this.host = host;
@@ -94,8 +94,7 @@ public class HttpChannelConnector implements ConnectionProvider<HttpClientConnec
             return conn;
         });
         clientHandler.addHandler(conn -> {
-            // todo 配置concurrency weight
-            future.complete(new ConnectResult<>(conn, 1, 8));
+            future.complete(new ConnectResult<>(conn, maxConcurrency, weight));
         });
         clientHandler.removeHandler(conn -> {
             listener.onEvict();

@@ -12,6 +12,7 @@ import org.stool.myserver.core.*;
 import org.stool.myserver.core.http.*;
 import org.stool.myserver.core.net.Buffer;
 
+import java.util.Map;
 import java.util.Objects;
 
 import static io.netty.handler.codec.rtsp.RtspHeaderNames.CONTENT_LENGTH;
@@ -26,9 +27,7 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
     private boolean chunked;
     private String hostHeader;
     private String rawMethod;
-    private Handler<Void> continueHandler;
     private Handler<Void> drainHandler;
-    private Handler<HttpClientRequest> pushHandler;
     private Handler<HttpConnection> connectionHandler;
     private Handler<Throwable> exceptionHandler;
     private boolean completed;
@@ -36,7 +35,6 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
     private Long reset;
     private ByteBuf pendingChunks;
     private int pendingMaxSize = -1;
-    private int followRedirects;
     private long written;
     private HttpHeaders headers;
     private HttpClientStream stream;
@@ -76,18 +74,6 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
         return this;
     }
 
-    @Override
-    public HttpClientRequest setFollowRedirects(boolean followRedirects) {
-        synchronized (this) {
-            checkComplete();
-            if (followRedirects) {
-                this.followRedirects = 10 - 1;
-            } else {
-                this.followRedirects = 0;
-            }
-            return this;
-        }
-    }
 
     @Override
     public HttpClientRequestImpl setChunked(boolean chunked) {
@@ -217,15 +203,6 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
 
 
     @Override
-    public synchronized HttpClientRequest continueHandler(Handler<Void> handler) {
-        if (handler != null) {
-            checkComplete();
-        }
-        this.continueHandler = handler;
-        return this;
-    }
-
-    @Override
     public HttpClientRequest sendHead() {
         return sendHead(null);
     }
@@ -264,6 +241,7 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
             Handler<HttpConnection> h1 = connectionHandler;
             Handler<HttpConnection> h2 = client.connectionHandler();
             Handler<HttpConnection> initializer;
+            // request中的connectionHandler优先级比client中的connectionHandler高
             if (h1 != null) {
                 if (h2 != null) {
                     initializer = conn -> {
@@ -283,12 +261,16 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
                 if (ar1.succeeded()) {
                     HttpClientStream stream = ar1.result();
                     Context ctx = stream.getContext();
+                    // id为1，是第一次创建的stream
                     if (stream.id() == 1 && initializer != null) {
                         ctx.executeFromIO(v -> initializer.handle(stream.connection()));
                     }
+
                     if (exceptionOccurred != null || reset != null) {
+                        // 若出现了错误，或者reset不为空，则reset
                         stream.reset(0);
                     } else {
+                        // 否则，建立连接
                         ctx.executeFromIO(v -> connected(headersHandler, stream));
                     }
                 } else {
@@ -314,7 +296,6 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
                 if (completed) {
                     // we also need to write the head so optimize this and write all out in once
                     stream.writeHead(method, uri, headers, hostHeader(), chunked, pending, true);
-                    stream.reportBytesWritten(written);
                     stream.endRequest();
                 } else {
                     stream.writeHead(method, uri, headers, hostHeader(), chunked, pending, false);
@@ -323,7 +304,6 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
                 if (completed) {
                     // we also need to write the head so optimize this and write all out in once
                     stream.writeHead(method, uri, headers, hostHeader(), chunked, null, true);
-                    stream.reportBytesWritten(written);
                     stream.endRequest();
                 } else {
                     stream.writeHead(method, uri, headers, hostHeader(), chunked, null, false);
@@ -396,6 +376,7 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
             if (buff != null) {
                 written += buff.readableBytes();
             }
+            // 第一次写 建立连接
             if ((s = stream) == null) {
                 if (buff != null) {
                     if (pendingChunks == null) {
@@ -423,9 +404,7 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
             }
         }
         s.writeBuffer(buff, end);
-        if (end) {
-            s.reportBytesWritten(written); // MUST BE READ UNDER SYNCHRONIZATION
-        }
+
         if (end) {
             Handler<Void> handler;
             synchronized (this) {
@@ -464,71 +443,9 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
     @Override
     protected void doHandleResponse(HttpClientResponse resp, long timeoutMs) {
         if (reset == null) {
-            int statusCode = resp.statusCode();
-            if (followRedirects > 0 && statusCode >= 300 && statusCode < 400) {
-                Future<HttpClientRequest> next = client.redirectHandler().apply(resp);
-                if (next != null) {
-                    next.setHandler(ar -> {
-                        if (ar.succeeded()) {
-                            handleNextRequest((HttpClientRequestImpl) ar.result(), timeoutMs);
-                        } else {
-                            handleException(ar.cause());
-                        }
-                    });
-                    return;
-                }
-            }
-
             respFut.complete(resp);
-
         }
     }
-
-    private void handleNextRequest(HttpClientRequestImpl next, long timeoutMs) {
-        next.handler(respFut.getHandler());
-        next.exceptionHandler(exceptionHandler());
-        exceptionHandler(null);
-        next.pushHandler = pushHandler;
-        next.followRedirects = followRedirects - 1;
-        next.written = written;
-        if (next.hostHeader == null) {
-            next.hostHeader = hostHeader;
-        }
-        if (headers != null && next.headers == null) {
-            // todo clone
-            next.headers = headers;
-        }
-        Future<Void> fut = Future.future();
-        fut.setHandler(ar -> {
-            if (ar.succeeded()) {
-                if (timeoutMs > 0) {
-                    next.setTimeout(timeoutMs);
-                }
-                next.end();
-            } else {
-                next.handleException(ar.cause());
-            }
-        });
-        if (exceptionOccurred != null) {
-            fut.fail(exceptionOccurred);
-        }
-        else if (completed) {
-            fut.complete();
-        } else {
-            exceptionHandler(err -> {
-                if (!fut.isComplete()) {
-                    fut.fail(err);
-                }
-            });
-            completionHandler = v -> {
-                if (!fut.isComplete()) {
-                    fut.complete();
-                }
-            };
-        }
-    }
-
-
 
     @Override
     public void handleDrained() {
@@ -550,12 +467,6 @@ public class HttpClientRequestImpl extends HttpClientRequestBase implements Http
         return null;
     }
 
-
-    @Override
-    public synchronized HttpClientRequest pushHandler(Handler<HttpClientRequest> handler) {
-        pushHandler = handler;
-        return this;
-    }
 
     @Override
     public boolean reset(long code) {

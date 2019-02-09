@@ -24,9 +24,6 @@ public class HttpClientOptions {
 
     public static final int DEFAULT_MAX_WAIT_QUEUE_SIZE = -1;
 
-    /**
-     * Default pool cleaner period = 1000 ms (1 second)
-     */
     public static final int DEFAULT_POOL_CLEANER_PERIOD = 1000;
 
     private int maxPoolSize;
