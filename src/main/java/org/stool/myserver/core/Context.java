@@ -32,11 +32,10 @@ public interface Context {
     /**
      * 在工作线程池中执行阻塞任务
      * @param blockingCodeHandler 阻塞任务，在工作线程池中执行
-     * @param ordered 是否是有顺序的阻塞任务
      * @param resultHandler 在阻塞任务执行完成后会执行的任务，在调用者的线程中执行
      * @param <T>
      */
-    <T> void executeBlocking(Handler<Future<T>> blockingCodeHandler, boolean ordered, Handler<AsyncResult<T>> resultHandler);
+    <T> void executeBlocking(Handler<Future<T>> blockingCodeHandler, Handler<AsyncResult<T>> resultHandler);
 
     /**
      * 直接在IO线程执行任务

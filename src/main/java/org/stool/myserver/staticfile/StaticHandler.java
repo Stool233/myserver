@@ -1,4 +1,4 @@
-package org.stool.myserver.core.file;
+package org.stool.myserver.staticfile;
 
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.route.RoutingContext;
@@ -31,7 +31,11 @@ public class StaticHandler implements Handler<RoutingContext>{
 
         routingContext.context().executeBlocking(event -> {
             routingContext.response().sendFile(localPath);
-        }, false, null);
+        },  ar -> {
+            if (ar.failed()) {
+                routingContext.response().setStatusCode(404).end();
+            }
+        });
 
 
     }

@@ -61,7 +61,7 @@ public abstract class ContextImpl implements Context {
 
 
     @Override
-    public <T> void executeBlocking(Handler<Future<T>> blockingCodeHandler, boolean ordered, Handler<AsyncResult<T>> asyncResultHandler) {
+    public <T> void executeBlocking(Handler<Future<T>> blockingCodeHandler, Handler<AsyncResult<T>> asyncResultHandler) {
         Runnable command = () -> {
             Future<T> res = Future.future();
             if (blockingCodeHandler != null) {
@@ -73,11 +73,9 @@ public abstract class ContextImpl implements Context {
                 runOnContext(action -> res.setHandler(asyncResultHandler));
             }
         };
-        if (ordered) {
-            // TODO
-        } else {
-            workerPool.execute(command);
-        }
+
+        workerPool.execute(command);
+
     }
 
     @Override

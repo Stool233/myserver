@@ -1,7 +1,7 @@
 package org.stool.myserver.example.simple;
 
 import org.stool.myserver.core.EntryPoint;
-import org.stool.myserver.core.file.StaticHandler;
+import org.stool.myserver.staticfile.StaticHandler;
 import org.stool.myserver.core.http.HttpServer;
 import org.stool.myserver.route.RouteHandler;
 
