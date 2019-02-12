@@ -4,18 +4,17 @@ import org.stool.myserver.core.EntryPoint;
 import org.stool.myserver.core.http.HttpMethod;
 import org.stool.myserver.core.http.HttpServerRequest;
 import org.stool.myserver.route.Route;
-import org.stool.myserver.route.Router;
+import org.stool.myserver.route.RouteHandler;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.ArrayList;
+import java.util.List;
 
-public class RouterImpl implements Router {
+public class RouteHandlerImpl implements RouteHandler {
 
     private final EntryPoint entryPoint;
-    private final Set<Route> routes = new HashSet<>();
+    private final List<Route> routes = new ArrayList<>();
 
-    public RouterImpl(EntryPoint entryPoint) {
+    public RouteHandlerImpl(EntryPoint entryPoint) {
         this.entryPoint = entryPoint;
     }
 

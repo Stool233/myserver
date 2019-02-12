@@ -48,4 +48,7 @@ public interface HttpServer extends Server{
     void close(Handler<AsyncResult<Void>> completionHandler);
 
 
+    int actualPort();
+
+    HttpServer elastic(int serverPortSize);
 }

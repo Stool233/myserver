@@ -17,6 +17,7 @@ import org.stool.myserver.core.http.HttpServer;
 import org.stool.myserver.core.http.HttpServerRequest;
 import org.stool.myserver.core.impl.ContextImpl;
 import org.stool.myserver.core.net.impl.*;
+import org.stool.myserver.core.proxy.ElasticHandler;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -57,7 +58,7 @@ public class HttpServerImpl implements HttpServer {
 
     @Override
     public Handler<HttpServerRequest> requestHandler() {
-        return null;
+        return requestStream.handler;
     }
 
     @Override
@@ -281,5 +282,16 @@ public class HttpServerImpl implements HttpServer {
         }
 
 
+    }
+
+    @Override
+    public int actualPort() {
+        return actualPort;
+    }
+
+    @Override
+    public HttpServer elastic(int serverPortSize) {
+        this.requestHandler(ElasticHandler.create(entryPoint, serverPortSize, this.requestHandler()));
+        return this;
     }
 }

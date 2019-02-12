@@ -2,9 +2,8 @@ package org.stool.myserver.route.impl;
 
 import org.stool.myserver.core.Handler;
 import org.stool.myserver.core.http.HttpMethod;
-import org.stool.myserver.core.http.HttpServerRequest;
 import org.stool.myserver.route.Route;
-import org.stool.myserver.route.Router;
+import org.stool.myserver.route.RouteHandler;
 import org.stool.myserver.route.RoutingContext;
 
 import java.util.HashSet;
@@ -12,9 +11,10 @@ import java.util.Set;
 
 public class RouteImpl implements Route {
 
-    private Router router;
+    private RouteHandler routeHandler;
     private Set<HttpMethod> methods = new HashSet<>();
     private String path;
+    private boolean exactPath;
     private Set<String> consumedContentTypes = new HashSet<>();
     private Set<String> producedContentType = new HashSet<>();
 
@@ -23,20 +23,31 @@ public class RouteImpl implements Route {
 
     private boolean added;
 
-    public RouteImpl(Router router) {
-        this.router = router;
+    public RouteImpl(RouteHandler routeHandler) {
+        this.routeHandler = routeHandler;
     }
 
-    public RouteImpl(Router router, HttpMethod method, String path) {
-        this(router);
+    public RouteImpl(RouteHandler routeHandler, HttpMethod method, String path) {
+        this(routeHandler);
         methods.add(method);
         checkPath(path);
-        this.path = path;
+        setPath(path);
     }
 
-    public RouteImpl(RouterImpl router, String path) {
+    private void setPath(String path) {
+        if (path.charAt(path.length() - 1) != '*') {
+            exactPath = true;
+            this.path = path;
+        } else {
+            exactPath = false;
+            this.path = path.substring(0, path.length() - 1);
+        }
+    }
+
+    public RouteImpl(RouteHandlerImpl router, String path) {
         this(router);
-        this.path = path;
+        checkPath(path);
+        setPath(path);
     }
 
     @Override
@@ -72,7 +83,7 @@ public class RouteImpl implements Route {
 
     private void checkAdd() {
         if (!added) {
-            router.add(this);
+            routeHandler.add(this);
             added = true;
         }
     }
@@ -80,7 +91,7 @@ public class RouteImpl implements Route {
     @Override
     public synchronized Route blockingHandler(Handler<RoutingContext> requestHandler) {
         // todo
-        return null;
+        return this;
     }
 
     @Override
@@ -92,11 +103,12 @@ public class RouteImpl implements Route {
 
     @Override
     public synchronized boolean matches(RoutingContext context) {
-        HttpServerRequest request = context.request();
-        if (path != null && !pathMatches(context)) {
+
+        if (!methods.isEmpty() && !methods.contains(context.request().method())) {
             return false;
         }
-        if (!methods.contains(context.request().method())) {
+
+        if (path != null && !pathMatches(context)) {
             return false;
         }
 
@@ -114,8 +126,33 @@ public class RouteImpl implements Route {
         contextHandler.handle(context);
     }
 
+    @Override
+    public void handleFailure(RoutingContext context) {
+        Handler<RoutingContext> failureHandler;
+
+        synchronized (this) {
+            failureHandler = this.failureHandler;
+        }
+
+        failureHandler.handle(context);
+    }
+
+    @Override
+    public boolean isExactPath() {
+        return exactPath;
+    }
+
+    @Override
+    public String path() {
+        return path;
+    }
+
     private boolean pathMatches(RoutingContext context) {
-        return (path.equals(context.request().path()));
+        if (exactPath) {
+            return path.equals(context.request().path());
+        } else {
+            return context.request().path().startsWith(path);
+        }
     }
 
     private void checkPath(String path) {

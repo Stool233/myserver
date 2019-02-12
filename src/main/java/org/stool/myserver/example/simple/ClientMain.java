@@ -1,5 +1,6 @@
 package org.stool.myserver.example.simple;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
 import org.stool.myserver.core.EntryPoint;
 import org.stool.myserver.core.http.HttpClient;
 import org.stool.myserver.core.http.HttpClientRequest;
@@ -21,6 +22,9 @@ public class ClientMain {
                 resp.bodyHandler(body -> System.out.println("Got data " + body.getByteBuf().toString(Charset.forName("utf-8"))));
             }
         });
+
+        request.headers().set(HttpHeaderNames.CONTENT_LENGTH, 4);
+        request.write("data");
 
         request.end();
     }

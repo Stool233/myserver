@@ -65,7 +65,7 @@ public interface HttpServerResponse {
 
     void handleDrained();
 
-    HttpServerResponseImpl sendFile(String filename, long offset, long length);
+    HttpServerResponse sendFile(String filename, long offset, long length);
 
     HttpServerResponse sendFile(String filename, long start, long end, Handler<AsyncResult<Void>> resultHandler);
 

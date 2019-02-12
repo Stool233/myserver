@@ -114,7 +114,7 @@ public class HttpClientResponseImpl implements HttpClientResponse {
 
     @Override
     public HttpHeaders headers() {
-        return null;
+        return headers;
     }
 
 

@@ -23,4 +23,10 @@ public interface Route {
     boolean matches(RoutingContext context);
 
     void handleContext(RoutingContext context);
+
+    void handleFailure(RoutingContext context);
+
+    boolean isExactPath();
+
+    String path();
 }

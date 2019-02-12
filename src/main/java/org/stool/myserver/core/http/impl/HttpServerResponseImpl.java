@@ -191,13 +191,15 @@ public class HttpServerResponseImpl implements HttpServerResponse {
     }
 
     private void prepareHeaders(long contentLength) {
-        // todo
         if (!keepAlive) {
             headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         }
         if (!headers.contains(HttpHeaderNames.TRANSFER_ENCODING) && !headers.contains(HttpHeaderNames.CONTENT_LENGTH) && contentLength >= 0) {
             String value = contentLength == 0 ? "0" : String.valueOf(contentLength);
             headers.set(HttpHeaderNames.CONTENT_LENGTH, value);
+        }
+        if (headersEndHandler != null) {
+            headersEndHandler.handle(null);
         }
         headWritten = true;
     }
@@ -371,7 +373,7 @@ public class HttpServerResponseImpl implements HttpServerResponse {
     }
 
     @Override
-    public HttpServerResponseImpl sendFile(String filename, long offset, long length) {
+    public HttpServerResponse sendFile(String filename, long offset, long length) {
         doSendFile(filename, offset, length, null);
         return this;
     }

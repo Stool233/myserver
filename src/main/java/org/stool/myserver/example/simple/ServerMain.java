@@ -46,7 +46,7 @@ public class ServerMain {
                 request.response().end("test");
             });
 
-        }).listen(8080);
+        }).listen(8082);
 
         server.start();
 
