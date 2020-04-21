@@ -4,9 +4,18 @@
 
 启动server例子
 ```java
-    EntryPoint.entryPoint()
-                .createHttpServer()
-                .requestHandler(request -> {
-                    request.response().end("Hello World");
-                }).listen(8085);
+EntryPoint entryPoint = EntryPoint.entryPoint();
+HttpServer httpServer = entryPoint.createHttpServer();
+
+RouteHandler routeHandler = RouteHandler.create(entryPoint);
+
+routeHandler.route(HttpMethod.GET, "/a/*").handler(routingContext -> {
+      routingContext.response().end("a");
+});
+
+routeHandler.route(HttpMethod.GET, "/b/*").handler(routingContext -> {
+      routingContext.response().end("b");
+});
+
+httpServer.requestHandler(routeHandler).listen(8080);
 ```
