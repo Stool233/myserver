@@ -3,7 +3,7 @@
 参考了Vert.x
 
 启动server例子
-```
+```java
     EntryPoint.entryPoint()
                 .createHttpServer()
                 .requestHandler(request -> {
